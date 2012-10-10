@@ -2,8 +2,11 @@
 
 from setuptools import setup, find_packages
 
+from ripestat import VERSION
+
+
 setup(name='ripestat-text',
-      version='0.1',
+      version=VERSION,
       description='Text mode utils for RIPEstat',
       author_email='stat@ripe.net',
       url='https://stat.ripe.net/cli/',
