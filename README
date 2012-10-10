@@ -1,0 +1,16 @@
+ripestat-text
+-------------
+This package contains several components, notably:
+
+    * the RIPEstat command-line client (ripestat)
+    * the RIPEstat whois server (ripestat-whois-server)
+    * the text widgets that are shared between the two
+    * a Python library to help you use the data API from your Python programs
+
+You can install the package by running the following command in the source directory:
+
+    $ python setup.py install
+
+or simply:
+
+    $ easy_install ripestat-text-0.1.tar.gz

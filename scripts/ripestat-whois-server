@@ -1,0 +1,10 @@
+#!/usr/bin/python
+
+import sys
+
+from ripestat.whois.server import StatWhoisServer
+
+
+if __name__ == "__main__":
+    server = StatWhoisServer(sys.argv[1:])
+    server.start()
