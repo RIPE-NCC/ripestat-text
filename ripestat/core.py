@@ -11,6 +11,10 @@ from ripestat.api import StatAPI, json
 from ripestat.whois.format import WhoisSerializer
 
 
+class QueryArgs(dict):
+    __slots__ = "resource_type"
+
+
 class Stat(object):
     """
     Class encapsulating the core functionality of RIPEstat text clients.
@@ -64,13 +68,25 @@ class Stat(object):
         """
         Convert positional key=value arguments to a Python dict.
         """
-        query = {}
+        query = QueryArgs()
         for arg in args:
             parts = arg.split("=", 1)
             if len(parts) == 1:
                 query["resource"] = parts[0]
             else:
                 query[parts[0]] = parts[1]
+
+        resource = query.get("resource")
+        if resource:
+            if "." in resource or "/" in resource or ":" in resource:
+                query.resource_type = "ip"
+            elif resource.lower().replace("as", "").isdigit():
+                query.resource_type = "asn"
+            else:
+                query.resource_type = "unknown"
+        else:
+            query.resource_type = None
+
         return query
 
     def get_plugin(self, query):
@@ -132,14 +148,14 @@ class Stat(object):
                 template=options.template)
         else:
             widget_names = self.get_widgets(options.widgets,
-                query.get("resource"))
+                query.resource_type)
             if widget_names:
                 self.api.caller_id = "%s/widgets" % self.caller_id
                 return self.output_widgets(widget_names, query)
             else:
                 raise self.UsageError
 
-    def get_widgets(self, widget_names, resource=None):
+    def get_widgets(self, widget_names, resource_type):
         """
         Resolve a comma separated list of widgets and @widget-groups to a
         native list of widget names.
@@ -147,11 +163,6 @@ class Stat(object):
         initial_list = widget_names.split(",") if widget_names else []
         if not initial_list:
             initial_list.append("@at-a-glance")
-
-        resource_type = "unknown"
-        if resource:
-            resource_type = "ip" if "." in resource or "/" in resource or ":" \
-                in resource else "asn"
 
         final_list = []
         for widget in initial_list:
