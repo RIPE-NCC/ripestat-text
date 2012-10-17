@@ -21,12 +21,8 @@ GROUPS = {
                 "resource-types": ["ip", "asn"]
             },
             {
-                "name": "announced-prefixes",
-                "resource-types": ["asn"]
-            },
-            {
-                "name": "routing-history",
-                "resource-types": ["ip"]
+                "name": "routing-status",
+                "resource-types": ["ip", "asn"]
             }
         ]
     }

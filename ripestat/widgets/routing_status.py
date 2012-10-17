@@ -1,24 +1,24 @@
-import datetime
+from __future__ import division
 
 
 def widget(api, query):
-    import pdb; pdb.set_trace()
-    if "start_time" not in query:
-        query["start_time"] = datetime.datetime.now() - \
-            datetime.timedelta(days=3)
-    data = api.get_data("routing-history", query, version=1)
+    data = api.get_data("routing-status", query, version=1)
+
+    visibility = data["visibility"]["ris_peers_seeing"] / \
+        data["visibility"]["total_ris_peers"]
 
     result = [
-        ("routing-history", data["resource"])
+        ("routing-status", data["resource"]),
+        ("visibility", "{0:.0%}    {1} of {2} full peers".format(
+            visibility, data["visibility"]["ris_peers_seeing"],
+            data["visibility"]["total_ris_peers"])),
+        ("first-seen", data["first_seen"]["time"]),
+        ("announced-v4", "{announced_v4_prefixes} prefixes; {announced_v4_ips}"
+            " IPs".format(**data)),
+        ("announced-v6", "{announced_v6_prefixes} prefixes; equivalent to "
+            "{announced_v6_48s} /48{0}".format("s" if data["announced_v6_48s"]
+            > 1 else "", **data)),
+        ("bgp-neighbours", "{observed_neighbours}".format(**data)),
     ]
-
-    for prefixes_for_origin in data["by_origin"]:
-        origin = prefixes_for_origin["origin"]
-        if data["resource"] != origin:
-            result.append(("origin", origin))
-        for prefix in prefixes_for_origin["prefixes"]:
-            timeline = prefix["timelines"][-1]
-            result.append(("prefix", "%s from %s to %s" % (prefix["prefix"],
-                timeline["starttime"], timeline["endtime"])))
 
     return result
