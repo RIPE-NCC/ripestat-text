@@ -1,3 +1,8 @@
+"""
+Module containing a ripestat-text command-line interface.
+
+The executable script for the CLI lives at scripts/ripestat.
+"""
 import sys
 import os
 from getpass import getpass
@@ -8,6 +13,9 @@ from ripestat.core import StatCore, UsageError, OtherError
 
 
 class StatCLI(object):
+    """
+    Class for handling command-line interaction with StatCore.
+    """
     parser = StatCore.parser
     option_group = OptionGroup(parser, "Authentication Options")
     option_group.add_option("-u", "--username", help="your RIPE NCC Access "
@@ -26,7 +34,7 @@ class StatCLI(object):
 
     def main(self, params):
         """
-        Process some command line parameters
+        Process some command line parameters and pass them to StatCore.
         """
         base_url = os.environ.get("STAT_URL", "https://stat.ripe.net/data/")
         token = os.environ.get("STAT_TOKEN")

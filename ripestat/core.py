@@ -1,3 +1,8 @@
+"""
+Module containing the main parsing/dispatching functionality for ripestat-text.
+
+The 'whois' and 'cli' interfaces both use this module.
+"""
 from fnmatch import fnmatch
 from optparse import OptionParser, OptionGroup
 from string import Formatter  # pylint: disable-msg=W0402
@@ -13,11 +18,24 @@ from ripestat.whois.format import WhoisSerializer
 
 class StatQuery(dict):
     """
-    Convert positional key=value arguments to a Python dict.
+    A dictionary of parameters for passing to a widget or data call.
     """
     __slots__ = "resource_type"
 
-    def __init__(self, args):
+    def __init__(self, *args):
+        """
+        Convert positional key=value arguments to a Python dict.
+
+        >>> query = StatQuery("year=2011", "limit=5", "as3333")
+        >>> query == {
+        ...    "year": "2011",
+        ...    "limit": "5",
+        ...    "resource": "as3333"
+        ... }
+        True
+        >>> query.resource_type
+        'asn'
+        """
         dict.__init__(self)
         for arg in args:
             parts = arg.split("=", 1)
@@ -41,14 +59,19 @@ class StatQuery(dict):
 
 class StatCore(object):
     """
-    Class encapsulating the core functionality of RIPEstat text clients.
+    Class encapsulating the core functionality of ripestat-text.
+
+    Calling classes can specify their own parser with more options. These
+    custom parsers must however be based on StatCore.parser.
     """
     parser = OptionParser()
+    # General options
     parser.add_option("-v", "--verbose", action="count",
         help="set output level info (-v) or debug (-vv)")
     parser.add_option("--version", action="store_true",
         help="print the ripestat-text version")
 
+    # Widget options
     widget_group = OptionGroup(parser, "Widget Options")
     widget_group.add_option("-w", "--widgets", help="a comma separated list "
         "of widgets and @widget-groups to include in the output")
@@ -56,6 +79,7 @@ class StatCore(object):
         "output the available widgets and @widget-groups")
     parser.add_option_group(widget_group)
 
+    # Data options
     data_group = OptionGroup(parser, "Data API Options")
     data_group.add_option("-d", "--data-call", help=
         "get the raw response from a data call")
@@ -80,6 +104,8 @@ class StatCore(object):
         logging.basicConfig()
         self.logger = logging.getLogger("ripestat")
 
+        # This function is called whenever something needs to be output to the
+        # user.
         self.output = callback
 
         self.api = api
@@ -108,7 +134,7 @@ class StatCore(object):
         elif options.explain_data_call:
             return self.explain_data_call(options.explain_data_call)
 
-        query = StatQuery(args)
+        query = StatQuery(*args)
 
         if options.data_call and options.widgets:
             raise UsageError(
@@ -164,6 +190,7 @@ class StatCore(object):
                 "https://stat.ripe.net/" + query["resource"])
         lines.append("")
 
+        # Execute each widget in parallel
         threads = []
         results_q = Queue()
         for widget_name in widget_names:
@@ -179,10 +206,11 @@ class StatCore(object):
                 results_q.put((widget_name, result))
             closure = lambda w=widget, n=widget_name: exec_widget(w, n)
             thread = threading.Thread(target=closure)
-            thread.daemon = True
+            thread.daemon = True  # makes the thread die with the controller
             thread.start()
             threads.append(thread)
 
+        # Wait for the widgets to finish rendering
         try:
             for thread in threads:
                 while thread.isAlive():
@@ -192,12 +220,8 @@ class StatCore(object):
 
         results = dict(results_q.queue)
 
-        first = True
+        # Output the rendered widgets in the order they were requested
         for widget_name in widget_names:
-            if first:
-                first = False
-            else:
-                lines.append("")
             if isinstance(results[widget_name], Exception):
                 exc = results[widget_name]
                 message = unicode(exc)
@@ -206,6 +230,9 @@ class StatCore(object):
                 lines.append(u"%s: %s" % (widget_name, message))
             else:
                 lines.extend(results[widget_name])
+            lines.append("")
+        if lines:
+            lines.pop()  # remove final newline
 
         output = WhoisSerializer().dumps(lines)
         self.output(output)
@@ -345,13 +372,6 @@ class StatCore(object):
                     pass
                 data = data[member]
         return data
-
-    #######################
-    # Input/Output handling
-    #######################
-
-    def output(self, line):
-        raise NotImplementedError()
 
 
 class UsageError(Exception):

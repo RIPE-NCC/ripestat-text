@@ -1,6 +1,11 @@
+"""
+Module containing functions for loading widgets, as well as some basic common
+functionality shared by various widgets.
+"""
 from functools import partial
 
 
+# This structure will be replaced with dynamic interaction with the server.
 GROUPS = {
     "at-a-glance": {
         "widgets": [
