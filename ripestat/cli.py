@@ -3,11 +3,12 @@ import os
 from getpass import getpass
 from optparse import OptionGroup
 
-from ripestat.core import Stat
+from ripestat.api import StatAPI
+from ripestat.core import StatCore, UsageError, OtherError
 
 
 class StatCLI(object):
-    parser = Stat.parser
+    parser = StatCore.parser
     option_group = OptionGroup(parser, "Authentication Options")
     option_group.add_option("-u", "--username", help="your RIPE NCC Access "
         "e-mail address")
@@ -18,16 +19,22 @@ class StatCLI(object):
     parser.add_option_group(option_group)
 
     def output(self, line):
+        """
+        Callback for outputting lines from the StatCore class.
+        """
         print(line.encode("utf-8"))
 
     def main(self, params):
+        """
+        Process some command line parameters
+        """
         base_url = os.environ.get("STAT_URL", "https://stat.ripe.net/data/")
         token = os.environ.get("STAT_TOKEN")
 
         options, args = self.parser.parse_args(params)
 
-        stat = Stat(self.output, parser=self.parser, base_url=base_url,
-            token=token, caller_id="cli")
+        api = StatAPI(base_url=base_url, token=token, caller_id="cli")
+        stat = StatCore(self.output, parser=self.parser, api=api)
         if (options.login or options.password) and not options.username:
             options.username = self.get_input("username: ")
         if options.username:
@@ -48,13 +55,13 @@ class StatCLI(object):
                 return 0
         try:
             return stat.main(params)
-        except Stat.UsageError as exc:
+        except UsageError as exc:
             if exc.message:
                 self.output(exc.message)
                 self.output("")
             print(self.parser.format_option_help())
             return 1
-        except Stat.OtherError as exc:
+        except OtherError as exc:
             self.output(exc.message)
             return 2
 

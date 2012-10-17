@@ -6,26 +6,52 @@ import re
 from Queue import Queue
 import threading
 
-from ripestat import widgets
+from ripestat import widgets, VERSION
 from ripestat.api import StatAPI, json
 from ripestat.whois.format import WhoisSerializer
 
 
-class QueryArgs(dict):
+class StatQuery(dict):
+    """
+    Convert positional key=value arguments to a Python dict.
+    """
     __slots__ = "resource_type"
 
+    def __init__(self, args):
+        dict.__init__(self)
+        for arg in args:
+            parts = arg.split("=", 1)
+            if len(parts) == 1:
+                self["resource"] = parts[0]
+            else:
+                self[parts[0]] = parts[1]
 
-class Stat(object):
+        # Work out the resource type
+        resource = self.get("resource")
+        if resource:
+            if "." in resource or "/" in resource or ":" in resource:
+                self.resource_type = "ip"
+            elif resource.lower().replace("as", "").isdigit():
+                self.resource_type = "asn"
+            else:
+                self.resource_type = "unknown"
+        else:
+            self.resource_type = None
+
+
+class StatCore(object):
     """
     Class encapsulating the core functionality of RIPEstat text clients.
     """
     parser = OptionParser()
     parser.add_option("-v", "--verbose", action="count",
         help="set output level info (-v) or debug (-vv)")
+    parser.add_option("--version", action="store_true",
+        help="print the ripestat-text version")
 
     widget_group = OptionGroup(parser, "Widget Options")
-    widget_group.add_option("-w", "--widgets", help="a comma separated list of "
-        "widgets and @widget-groups to include in the output")
+    widget_group.add_option("-w", "--widgets", help="a comma separated list "
+        "of widgets and @widget-groups to include in the output")
     widget_group.add_option("-l", "--list-widgets", action="store_true", help=
         "output the available widgets and @widget-groups")
     parser.add_option_group(widget_group)
@@ -50,72 +76,17 @@ class Stat(object):
         "'{primary.key} = {primary.value}'")
     parser.add_option_group(data_group)
 
-    def __init__(self, callback, base_url, token=None, parser=None,
-            caller_id="core"):
+    def __init__(self, callback, api, parser=None):
         logging.basicConfig()
         self.logger = logging.getLogger("ripestat")
 
         self.output = callback
 
-        self.caller_id = caller_id
-        self.api = StatAPI(base_url=base_url, token=token, caller_id=caller_id)
+        self.api = api
+        self.caller_id = self.api.caller_id
 
         if parser:
             self.parser = parser
-
-    @staticmethod
-    def parse_args(args):
-        """
-        Convert positional key=value arguments to a Python dict.
-        """
-        query = QueryArgs()
-        for arg in args:
-            parts = arg.split("=", 1)
-            if len(parts) == 1:
-                query["resource"] = parts[0]
-            else:
-                query[parts[0]] = parts[1]
-
-        resource = query.get("resource")
-        if resource:
-            if "." in resource or "/" in resource or ":" in resource:
-                query.resource_type = "ip"
-            elif resource.lower().replace("as", "").isdigit():
-                query.resource_type = "asn"
-            else:
-                query.resource_type = "unknown"
-        else:
-            query.resource_type = None
-
-        return query
-
-    def get_plugin(self, query):
-        """
-        Decide which plugin to use based on the type of the given resource.
-        """
-        resource = query.get("resource", "")
-        if resource.isalnum():
-            return "as-overview"
-        elif resource:
-            return "prefix-overview"
-        else:
-            self.logger.error("No resource specified: "
-                "can't guess which plugin to use")
-
-    def output(self, line):
-        raise NotImplementedError()
-
-    class UsageError(Exception):
-        """
-        This is raised when the user has supplied funny parameters and might
-        need to be reminded of the usage.
-        """
-
-    class OtherError(Exception):
-        """
-        This is raised when there is an error that won't be helped by displaying
-        the usage help.
-        """
 
     def main(self, args):
         """
@@ -123,22 +94,24 @@ class Stat(object):
         """
         options, args = self.parser.parse_args(args)
 
-        if options.list_widgets:
+        if options.verbose == 1:
+            self.logger.setLevel(logging.INFO)
+        elif options.verbose and options.verbose >= 2:
+            self.logger.setLevel(logging.DEBUG)
+
+        if options.version:
+            return self.show_version()
+        elif options.list_widgets:
             return self.list_widgets()
         elif options.list_data_calls:
             return self.list_data_calls()
         elif options.explain_data_call:
             return self.explain_data_call(options.explain_data_call)
 
-        if options.verbose == 1:
-            self.logger.setLevel(logging.INFO)
-        elif options.verbose and options.verbose >= 2:
-            self.logger.setLevel(logging.DEBUG)
-
-        query = self.parse_args(args)
+        query = StatQuery(args)
 
         if options.data_call and options.widgets:
-            raise self.UsageError(
+            raise UsageError(
                 "--data-call and --widgets are conflicting options")
         elif options.data_call:
             self.api.caller_id = "%s/data-call" % self.caller_id
@@ -147,40 +120,42 @@ class Stat(object):
                 abbreviate=options.abbreviate_data, select=options.select,
                 template=options.template)
         else:
-            widget_names = self.get_widgets(options.widgets,
-                query.resource_type)
-            if widget_names:
-                self.api.caller_id = "%s/widgets" % self.caller_id
-                return self.output_widgets(widget_names, query)
-            else:
-                raise self.UsageError
+            self.api.caller_id = "%s/widgets" % self.caller_id
+            return self.output_widgets(options.widgets, query)
 
-    def get_widgets(self, widget_names, resource_type):
+    def show_version(self):
         """
-        Resolve a comma separated list of widgets and @widget-groups to a
-        native list of widget names.
+        Output the public ripestat-text version label.
         """
-        initial_list = widget_names.split(",") if widget_names else []
-        if not initial_list:
-            initial_list.append("@at-a-glance")
+        self.output(VERSION)
 
-        final_list = []
-        for widget in initial_list:
-            if widget.startswith("@"):
-                group_widgets = widgets.get_group_widgets(widget[1:],
-                    resource_type)
-                if group_widgets is None:
-                    raise self.OtherError("Unknown group: %s" % widget)
-                final_list.extend(group_widgets)
-            else:
-                final_list.append(widget)
-        return final_list
+    ################################################
+    # Methods for working with ripestat-text widgets
+    ################################################
 
-    def output_widgets(self, widget_names, query):
+    def list_widgets(self):
+        """
+        Output a list of available widgets.
+        """
+        self.output("% widgets")
+        for widget in widgets.get_widget_list():
+            self.output(widget)
+        self.output("")
+        self.output("% widget groups")
+        for widget_group, widget_defs in widgets.get_widget_groups():
+            line = "@%s    " % widget_group + ",".join(w["name"] for w in
+                widget_defs)
+            self.output(line)
+
+    def output_widgets(self, widgets_spec, query):
         """
         Carry out queries for the given resource and display results for the
         specified widgets.
         """
+        widget_names = self.get_widgets(widgets_spec, query.resource_type)
+        if not widget_names:
+            raise UsageError
+
         lines = []
 
         if "resource" in query:
@@ -198,6 +173,9 @@ class Stat(object):
                     result = widget(self.api, query)
                 except StatAPI.Error as exc:
                     result = exc
+                except Exception as exc:
+                    logging.exception(exc)
+                    result = Exception("")
                 results_q.put((widget_name, result))
             closure = lambda w=widget, n=widget_name: exec_widget(w, n)
             thread = threading.Thread(target=closure)
@@ -221,7 +199,8 @@ class Stat(object):
             else:
                 lines.append("")
             if isinstance(results[widget_name], Exception):
-                message = unicode(results[widget_name])
+                exc = results[widget_name]
+                message = unicode(exc)
                 if not message:
                     message = "There was an error rendering this widget."
                 lines.append(u"%s: %s" % (widget_name, message))
@@ -233,19 +212,51 @@ class Stat(object):
 
         return 0
 
-    def list_widgets(self):
+    def get_widgets(self, widget_names, resource_type):
         """
-        Output a list of available widgets.
+        Resolve a comma separated list of widgets and @widget-groups to a
+        native list of widget names.
         """
-        self.output("% widgets")
-        for widget in widgets.get_widget_list():
-            self.output(widget)
-        self.output("")
-        self.output("% widget groups")
-        for widget_group, widget_defs in widgets.get_widget_groups():
-            line = "@%s    " % widget_group + ",".join(w["name"] for w in
-                widget_defs)
-            self.output(line)
+        initial_list = widget_names.split(",") if widget_names else []
+        if not initial_list:
+            initial_list.append("@at-a-glance")
+
+        final_list = []
+        for widget in initial_list:
+            if widget.startswith("@"):
+                group_widgets = widgets.get_group_widgets(widget[1:],
+                    resource_type)
+                if group_widgets is None:
+                    raise OtherError("Unknown group: %s" % widget)
+                final_list.extend(group_widgets)
+            else:
+                final_list.append(widget)
+        return final_list
+
+
+    ################################################
+    # Methods for working directly with the Data API 
+    ################################################
+
+    def list_data_calls(self):
+        """
+        Output a list of available data calls.
+        """
+        response = self.api.get_response("list.json")
+        native = json.loads(response)
+
+        for plugin in sorted(p["slug"] for p in native):
+            self.output(plugin)
+
+    def explain_data_call(self, data_call):
+        """
+        Output the methodology for a given data call.
+        """
+        response = self.api.get_response("%s/meta/methodology" % data_call)
+        native = json.loads(response)
+        self.output(data_call)
+        self.output("-" * len(data_call))
+        self.output(native["methodology"])
 
     def output_data(self, data_call, query, include_metadata=False,
             abbreviate=False, select=None, template=None):
@@ -335,25 +346,26 @@ class Stat(object):
                 data = data[member]
         return data
 
-    def list_data_calls(self):
-        """
-        Output a list of available data calls.
-        """
-        response = self.api.get_response("list.json")
-        native = json.loads(response)
+    #######################
+    # Input/Output handling
+    #######################
 
-        for plugin in sorted(p["slug"] for p in native):
-            self.output(plugin)
+    def output(self, line):
+        raise NotImplementedError()
 
-    def explain_data_call(self, data_call):
-        """
-        Output the methodology for a given data call.
-        """
-        response = self.api.get_response("%s/meta/methodology" % data_call)
-        native = json.loads(response)
-        self.output(data_call)
-        self.output("-" * len(data_call))
-        self.output(native["methodology"])
+
+class UsageError(Exception):
+    """
+    This is raised when the user has supplied funny parameters and might
+    need to be reminded of the usage.
+    """
+
+
+class OtherError(Exception):
+    """
+    This is raised when there is an error that won't be helped by displaying
+    the usage help.
+    """
 
 
 class GlobList(list):
