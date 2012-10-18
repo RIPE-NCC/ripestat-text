@@ -22,7 +22,7 @@ class StatAPI(object):
         The base class for exceptions raised by this class.
         """
 
-    class ServerError(Exception):
+    class ServerError(Error):
         """
         Raised when an unsuccesful response is received from the server.
         """
@@ -41,7 +41,7 @@ class StatAPI(object):
             StatAPI.Error.__init__(self, "expected version {1}.x of the '{0}' "
                 "data call; found {2}".format(call, requested, actual))
 
-    def __init__(self, base_url=DATA_API, token=None, caller_id=None):
+    def __init__(self, caller_id, base_url=DATA_API, token=None):
         self.base_url = base_url
 
         self.cookiejar = StatCookieJar(token)

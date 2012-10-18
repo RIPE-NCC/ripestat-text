@@ -22,7 +22,7 @@ class WhoisProtocol(LineReceiver):
         """
         Parse a line of user input and pass it to StatCore.
         """
-        api = StatAPI(base_url=self.factory.base_url, caller="whois")
+        api = StatAPI("whois", base_url=self.factory.base_url)
         core = StatCore(self.script_output, api=api)
         core.main(line.split())
         self.transport.loseConnection()

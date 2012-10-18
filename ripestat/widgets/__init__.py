@@ -90,7 +90,8 @@ def default_widget(widget_name, api, query):
     items = [
         "'%s' doesn't have a command-line widget yet. Below is a direct "
         "translation of the data response." % widget_name,
-        "You can contribute a widget at https://stat.ripe.net/cli/",
+        "You can contribute a widget at "
+        "https://github.com/RIPE-NCC/ripestat-text",
     ]
     title = widget_name
     resource = data.get("resource")

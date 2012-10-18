@@ -2,3 +2,5 @@
 build/
 dist/
 ripestat_text.egg-info/
+*.swp
+*~

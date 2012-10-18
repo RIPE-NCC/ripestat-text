@@ -41,7 +41,7 @@ class StatCLI(object):
 
         options, args = self.parser.parse_args(params)
 
-        api = StatAPI(base_url=base_url, token=token, caller_id="cli")
+        api = StatAPI("cli", base_url=base_url, token=token)
         stat = StatCore(self.output, parser=self.parser, api=api)
         if (options.login or options.password) and not options.username:
             options.username = self.get_input("username: ")
