@@ -5,15 +5,15 @@ Installation
 ============
 
 You can install the package system wide by running the following command in 
-the source directory:
+the source directory::
 
     $ python setup.py install
 
-or to install for a single user:
+or to install for a single user::
 
     $ python setup.py install --user; export PATH=~/.local/bin
 
-You can always upgrade to the latest release with this command:
+You can always upgrade to the latest release with this command::
 
     $ easy_install -U https://github.com/RIPE-NCC/ripestat-text/tarball/latest
 
@@ -67,14 +67,15 @@ Data scripting
 It is possible to use the data API for heavier scripting using the data call 
 options. In particular::
 
-    -s bla.*.bla               select a particular child item or items from the data response, using dot notation and glob matching
+    -s bla.*.bla   (select data using dot notation and glob matching)
 
-    -t 'prefix: {prefix}'      render the matched item(s) using a simple string template   
+    -t 'prefix: {prefix}'   (render matched items using string templating)
 
 For example, to get a list of prefixes that have historically been announced 
 by a certain ASN, sorted by the time they were first announced::
 
-    $ ripestat as3333 -d routing-history -s by_origin.*.prefixes -t '{timelines.0.starttime} {prefix}' | sort
+    $ ripestat as3333 -d routing-history -s by_origin.*.prefixes \
+            -t '{timelines.0.starttime} {prefix}' | sort
     2000-08-20T00:00:00 193.0.0.0/22
     2000-09-09T00:00:00 193.0.0.0/21
     2002-06-06T16:00:00 192.16.202.0/24
@@ -108,5 +109,4 @@ RIPEstat::
 
     from ripestat.api import StatAPI
     api = StatAPI("my-first-ripestat-script")
-    print("Current outgoing web IP: {ip}".format(
-        **api.get_data("whats-my-ip")))
+    print("Outgoing IP address: {ip}".format(**api.get_data("whats-my-ip")))
