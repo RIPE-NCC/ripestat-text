@@ -5,7 +5,7 @@ Licence
 =======
 This package is distributed under the terms of the LGPL v3 or later:
 
-    https://raw.github.com/RIPE-NCC/ripestat-text/latest/LICENCE
+    https://raw.github.com/RIPE-NCC/ripestat-text/master/LICENCE
 
 Installation
 ============
@@ -21,7 +21,7 @@ or to install for a single user::
 
 You can always upgrade to the latest release with this command::
 
-    $ easy_install -U https://github.com/RIPE-NCC/ripestat-text/tarball/latest
+    $ easy_install -U https://github.com/RIPE-NCC/ripestat-text/tarball/master
 
 Overview
 ========
