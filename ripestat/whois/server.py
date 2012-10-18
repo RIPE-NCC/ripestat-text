@@ -30,7 +30,7 @@ class StatWhoisServer(object):
         Start listening on the given port.
         """
         factory = WhoisFactory(self.options.base_url)
-        for interface in (self.options.interface or ["", "::"]):
+        for interface in (self.options.interface or ["::"]):
             reactor.listenTCP(int(self.options.port), factory,
                 interface=interface)
         reactor.run()
