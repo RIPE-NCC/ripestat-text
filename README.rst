@@ -1,6 +1,12 @@
 ripestat-text
 -------------
 
+Licence
+=======
+This package is distributed under the terms of the LGPL v3 or later:
+
+    https://github.com/RIPE-NCC/ripestat-text/latest/LICENCE
+
 Installation
 ============
 
