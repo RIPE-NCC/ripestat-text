@@ -39,8 +39,11 @@ def get_group_widgets(group_name, resource_type):
     Get a list of widgets for the given group and resource type.
     """
     group_name = group_name.lower()
+    group_widgets = GROUPS.get(group_name)
+    if group_widgets is None:
+        return
     widgets = []
-    for widget in GROUPS.get(group_name, {}).get("widgets", []):
+    for widget in group_widgets.get("widgets", []):
         if resource_type in widget["resource-types"]:
             widgets.append(widget["name"])
     return widgets

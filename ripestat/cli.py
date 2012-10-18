@@ -4,31 +4,52 @@ Module containing a ripestat-text command-line interface.
 The executable script for the CLI lives at scripts/ripestat.
 """
 from getpass import getpass
-from optparse import OptionGroup
+from optparse import OptionGroup, make_option
 import logging
 import os
 import sys
 
 from ripestat.api import StatAPI
-from ripestat.core import StatCore, UsageError, OtherError
+from ripestat.core import StatCore, StatCoreParser
+
+
+class StatCLIParser(StatCoreParser):
+    """
+    Parser that knows about CLI specific options.
+    """
+    # Options for SSO authentication
+    auth_option_list = [
+        make_option("-u", "--username", help="your RIPE NCC Access "
+            "e-mail address"),
+        make_option("-g", "--login", help="login subsequent requests "
+            "from this shell", action="store_true"),
+        make_option("--password", help="your RIPE NCC Access password"
+            " (will appear in `ps` listings etc)")
+    ]
+
+    # Debug options
+    extra_option_list = [
+        make_option("--tracebacks", help="Show full error reports when "
+        "widgets fail", action="store_true")
+    ]
+
+    def __init__(self, *args, **kwargs):
+        StatCoreParser.__init__(self, *args, **kwargs)
+
+        auth_group = OptionGroup(self, "Authentication Options")
+        for option in self.auth_option_list:
+            auth_group.add_option(option)
+        self.add_option_group(auth_group)
+
+        for option in self.extra_option_list:
+            self.add_option(option)
 
 
 class StatCLI(object):
     """
     Class for handling command-line interaction with StatCore.
     """
-    parser = StatCore.parser
-    option_group = OptionGroup(parser, "Authentication Options")
-    option_group.add_option("-u", "--username", help="your RIPE NCC Access "
-        "e-mail address")
-    option_group.add_option("-g", "--login", help="login subsequent requests "
-        "from this shell", action="store_true")
-    option_group.add_option("--password", help="your RIPE NCC Access password"
-        " (will appear in `ps` listings etc)")
-    parser.add_option_group(option_group)
-
-    parser.add_option("--tracebacks", help="Show full error reports when "
-        "widgets fail", action="store_true")
+    parser = StatCLIParser()
 
     def __init__(self):
         logger = logging.getLogger(None)
@@ -75,17 +96,7 @@ class StatCLI(object):
                 self.output("STAT_TOKEN=" + token +
                     "; export STAT_TOKEN; echo STAT_TOKEN has been set. You are now logged in to RIPEstat with this shell.")
                 return 0
-        try:
-            return stat.main(params)
-        except UsageError as exc:
-            if exc.message:
-                self.output(exc.message)
-                self.output("")
-            print(self.parser.format_option_help())
-            return 1
-        except OtherError as exc:
-            self.output(exc.message)
-            return 2
+        return stat.main(params)
 
     def get_input(self, prompt):
         """

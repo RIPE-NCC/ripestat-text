@@ -4,7 +4,7 @@ Module containing the main parsing/dispatching functionality for ripestat-text.
 The 'whois' and 'cli' interfaces both use this module.
 """
 from fnmatch import fnmatch
-from optparse import OptionParser, OptionGroup
+from optparse import OptionParser, OptionGroup, make_option
 from string import Formatter  # pylint: disable-msg=W0402
 import logging
 import re
@@ -57,6 +57,66 @@ class StatQuery(dict):
             self.resource_type = None
 
 
+class StatCoreParser(OptionParser):
+    """
+    Option parser that knows about all of the options available for StatCore.
+
+    This can be subclassed to add more options or change the behaviour.
+    """
+    # General options
+    standard_option_list = [
+        make_option("-v", "--verbose", action="count",
+            help="set output level info (-v) or debug (-vv)"),
+        make_option("--version", action="store_true",
+            help="print the ripestat-text version"),
+        make_option("--help", "-h", action="store_true",
+            help="show this help text"),
+    ]
+
+    # Widget options
+    widget_option_list = [
+        make_option("-w", "--widgets", help="a comma separated list "
+            "of widgets and @widget-groups to include in the output"),
+        make_option("-l", "--list-widgets", action="store_true", help=
+            "output the available widgets and @widget-groups"),
+    ]
+
+    # Data options
+    data_option_list = [
+        make_option("-d", "--data-call", help=
+            "get the raw response from a data call"),
+        make_option("--list-data-calls", help="output the available "
+            "data calls", action="store_true"),
+        make_option("--explain-data-call", help="print help and "
+            "methodology for a data call"),
+        make_option("-m", "--include-metadata", action="store_true",
+            help="include the metadata in the data response instead of "
+                "printing data to stdout and messages to stderr"),
+        make_option("-a", "--abbreviate-data", action="store_true", help=
+            "abbreviate the response to get an idea of the structure"),
+        make_option("-s", "--select", help="select particular data item"
+            " element(s) using dot notation, possibly using * globs -- e.g. "
+            "'backward_refs.*.primary.key'"),
+        make_option("-t", "--template", help="render the response using "
+            "Python 3 string formatting -- e.g. "
+            "'{primary.key} = {primary.value}'"),
+    ]
+
+    def __init__(self, *args, **kwargs):
+        kwargs["add_help_option"] = False
+        OptionParser.__init__(self, *args, **kwargs)
+        widget_group = OptionGroup(self, "Widget Options")
+
+        for option in self.widget_option_list:
+            widget_group.add_option(option)
+        self.add_option_group(widget_group)
+
+        data_group = OptionGroup(self, "Data API Options")
+        for option in self.data_option_list:
+            data_group.add_option(option)
+        self.add_option_group(data_group)
+
+
 class StatCore(object):
     """
     Class encapsulating the core functionality of ripestat-text.
@@ -64,42 +124,6 @@ class StatCore(object):
     Calling classes can specify their own parser with more options. These
     custom parsers must however be based on StatCore.parser.
     """
-    parser = OptionParser()
-    # General options
-    parser.add_option("-v", "--verbose", action="count",
-        help="set output level info (-v) or debug (-vv)")
-    parser.add_option("--version", action="store_true",
-        help="print the ripestat-text version")
-
-    # Widget options
-    widget_group = OptionGroup(parser, "Widget Options")
-    widget_group.add_option("-w", "--widgets", help="a comma separated list "
-        "of widgets and @widget-groups to include in the output")
-    widget_group.add_option("-l", "--list-widgets", action="store_true", help=
-        "output the available widgets and @widget-groups")
-    parser.add_option_group(widget_group)
-
-    # Data options
-    data_group = OptionGroup(parser, "Data API Options")
-    data_group.add_option("-d", "--data-call", help=
-        "get the raw response from a data call")
-    data_group.add_option("--list-data-calls", help="output the available "
-        "data calls", action="store_true")
-    data_group.add_option("--explain-data-call", help="print help and "
-        "methodology for a data call")
-    data_group.add_option("-m", "--include-metadata", action="store_true",
-        help="include the metadata in the data response instead of printing "
-        "data to stdout and messages to stderr")
-    data_group.add_option("-a", "--abbreviate-data", action="store_true", help=
-        "abbreviate the response to get an idea of the structure")
-    data_group.add_option("-s", "--select", help="select particular data item"
-        " element(s) using dot notation, possibly using * globs -- e.g. "
-        "'backward_refs.*.primary.key'")
-    data_group.add_option("-t", "--template", help="render the response using "
-        "Python 3 string formatting -- e.g. "
-        "'{primary.key} = {primary.value}'")
-    parser.add_option_group(data_group)
-
     def __init__(self, callback, api, parser=None):
         logging.basicConfig()
         self.logger = logging.getLogger("ripestat")
@@ -113,13 +137,36 @@ class StatCore(object):
 
         if parser:
             self.parser = parser
+        else:
+            self.parser = StatCoreParser()
 
     def main(self, args):
         """
         Process the command line from the user and print a response to stdout.
+
+        This method calls self._main() so that it can catch UsageWithHelp and
+        UsageWithoutHelp.
         """
         options, args = self.parser.parse_args(args)
 
+        try:
+            return self._main(options, args)
+        except UsageWithHelp as exc:
+            if exc.message:
+                self.output(exc.message)
+                self.output("")
+            self.output(self.parser.format_option_help())
+            return 1
+        except UsageWithoutHelp as exc:
+            self.output(exc.message)
+            return 2
+
+    def _main(self, options, args):
+        """
+        Internal method for responding to a command line.
+
+        May raise UsageWithHelp or UsageWithoutHelp.
+        """
         if options.verbose == 1:
             self.logger.setLevel(logging.INFO)
         elif options.verbose and options.verbose >= 2:
@@ -127,6 +174,8 @@ class StatCore(object):
 
         if options.version:
             return self.show_version()
+        elif options.help:
+            return self.parser.print_help()
         elif options.list_widgets:
             return self.list_widgets()
         elif options.list_data_calls:
@@ -137,7 +186,7 @@ class StatCore(object):
         query = StatQuery(*args)
 
         if options.data_call and options.widgets:
-            raise UsageError(
+            raise UsageWithHelp(
                 "--data-call and --widgets are conflicting options")
         elif options.data_call:
             self.api.caller_id = "%s/data-call" % self.caller_id
@@ -153,7 +202,7 @@ class StatCore(object):
         """
         Output the public ripestat-text version label.
         """
-        self.output(VERSION)
+        self.output(unicode(VERSION))
 
     ################################################
     # Methods for working with ripestat-text widgets
@@ -180,7 +229,11 @@ class StatCore(object):
         """
         widget_names = self.get_widgets(widgets_spec, query.resource_type)
         if not widget_names:
-            raise UsageError
+            if "resource" in query:
+                raise UsageWithoutHelp("No widgets match the given resource "
+                    "type.")
+            else:
+                raise UsageWithHelp()
 
         lines = []
 
@@ -254,7 +307,8 @@ class StatCore(object):
                 group_widgets = widgets.get_group_widgets(widget[1:],
                     resource_type)
                 if group_widgets is None:
-                    raise OtherError("Unknown group: %s" % widget)
+                    raise UsageWithoutHelp("No such widget group: {0}".format(
+                        widget))
                 final_list.extend(group_widgets)
             else:
                 final_list.append(widget)
@@ -374,14 +428,14 @@ class StatCore(object):
         return data
 
 
-class UsageError(Exception):
+class UsageWithHelp(Exception):
     """
     This is raised when the user has supplied funny parameters and might
     need to be reminded of the usage.
     """
 
 
-class OtherError(Exception):
+class UsageWithoutHelp(Exception):
     """
     This is raised when there is an error that won't be helped by displaying
     the usage help.

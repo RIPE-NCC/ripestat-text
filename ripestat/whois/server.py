@@ -9,7 +9,7 @@ from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor
 
 from ripestat.api import StatAPI
-from ripestat.core import StatCore
+from ripestat.core import StatCore, StatCoreParser
 
 
 class StatWhoisServer(object):
@@ -36,6 +36,30 @@ class StatWhoisServer(object):
         reactor.run()
 
 
+class WhoisLineParser(StatCoreParser):
+    """
+    StatCoreParser subclass that responds to input from the whois clients.
+    """
+    def __init__(self, protocol, *args, **kwargs):
+        self.protocol = protocol
+        StatCoreParser.__init__(self, *args, **kwargs)
+
+    def print_help(self, *args, **kwargs):
+        for line in  self.format_help().split("\n"):
+            self.protocol.output(line)
+
+    def print_usage(self, *args, **kwargs):
+        if self.usage:
+            for line in self.get_usage().split("\n"):
+                self.protocol.output(line)
+
+    def exit(self, *args, **kwargs):
+        """
+        The whois parser should never exit.
+        """
+        pass
+
+
 class WhoisProtocol(LineReceiver):
     """
     Twisted protocol that passes I/O between the user and StatCore.
@@ -44,11 +68,13 @@ class WhoisProtocol(LineReceiver):
         """
         Parse a line of user input and pass it to StatCore.
         """
-        core = StatCore(self.script_output, api=self.factory.api)
+        parser = WhoisLineParser(self)
+        core = StatCore(self.output, api=self.factory.api,
+            parser=parser)
         core.main(line.split())
         self.transport.loseConnection()
 
-    def script_output(self, line):
+    def output(self, line):
         """
         Callback method to allow StatCore to send output over the network.
         """
