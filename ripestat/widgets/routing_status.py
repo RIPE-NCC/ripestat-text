@@ -7,7 +7,7 @@ def widget(api, query):
     data = api.get_data("routing-status", query, version=1)
 
     visibility = data["visibility"]["ris_peers_seeing"] / \
-        data["visibility"]["total_ris_peers"]
+        (data["visibility"]["total_ris_peers"] or 1)
 
     result = [
         ("routing-status", data["resource"]),
