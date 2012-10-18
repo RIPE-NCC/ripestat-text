@@ -17,7 +17,7 @@ the source directory::
 
 or to install for a single user::
 
-    $ python setup.py install --user; export PATH=~/.local/bin
+    $ python setup.py install --user; export PATH=$PATH:~/.local/bin
 
 You can always upgrade to the latest release with this command::
 
