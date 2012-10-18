@@ -45,13 +45,11 @@ class WhoisLineParser(StatCoreParser):
         StatCoreParser.__init__(self, *args, **kwargs)
 
     def print_help(self, *args, **kwargs):
-        for line in  self.format_help().split("\n"):
+        for line in  self.format_option_help().split("\n"):
             self.protocol.output(line)
 
     def print_usage(self, *args, **kwargs):
-        if self.usage:
-            for line in self.get_usage().split("\n"):
-                self.protocol.output(line)
+        self.print_help()
 
     def exit(self, *args, **kwargs):
         """
