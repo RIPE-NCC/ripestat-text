@@ -3,10 +3,11 @@ Module containing a ripestat-text command-line interface.
 
 The executable script for the CLI lives at scripts/ripestat.
 """
-import sys
-import os
 from getpass import getpass
 from optparse import OptionGroup
+import logging
+import os
+import sys
 
 from ripestat.api import StatAPI
 from ripestat.core import StatCore, UsageError, OtherError
@@ -26,6 +27,13 @@ class StatCLI(object):
         " (will appear in `ps` listings etc)")
     parser.add_option_group(option_group)
 
+    parser.add_option("--tracebacks", help="Show full error reports when "
+        "widgets fail", action="store_true")
+
+    def __init__(self):
+        logger = logging.getLogger(None)
+        logger.setLevel(logging.CRITICAL)
+
     def output(self, line):
         """
         Callback for outputting lines from the StatCore class.
@@ -40,6 +48,12 @@ class StatCLI(object):
         token = os.environ.get("STAT_TOKEN")
 
         options, args = self.parser.parse_args(params)
+
+        logger = logging.getLogger(None)
+        if options.tracebacks:
+            logger.setLevel(logging.ERROR)
+        else:
+            logger.setLevel(logging.CRITICAL)
 
         api = StatAPI("cli", base_url=base_url, token=token)
         stat = StatCore(self.output, parser=self.parser, api=api)
