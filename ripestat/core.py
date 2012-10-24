@@ -13,7 +13,7 @@ import threading
 
 from ripestat import widgets, VERSION
 from ripestat.api import StatAPI, json
-from ripestat.whois.format import WhoisSerializer
+from ripestat.whois import WhoisSerializer
 
 
 class StatQuery(dict):
@@ -258,22 +258,22 @@ class StatCore(object):
                     result = Exception("")
                 else:
                     response, result = result
-                    queried_time = ""
+                    time_str = ""
                     if response is None:
                         response = {}
                     if "query_time" in response:
-                        queried_time += response["query_time"]
+                        time_str += response["query_time"]
                     else:
                         if "query_starttime" in response:
-                            queried_time = response["query_starttime"]
+                            time_str = response["query_starttime"]
                         if "query_endtime" in response:
                             if "query_starttime" in response:
-                                queried_time += " to "
+                                time_str += " to "
                             else:
-                                queried_time += "since "
-                            queried_time += response["query_endtime"]
-                    if queried_time:
-                        result.append(("query-time", queried_time))
+                                time_str += "since "
+                            time_str += response["query_endtime"]
+                    if time_str:
+                        result.append(("query-time", time_str))
                     if include_metadata:
                         for key in response.meta:
                             result.append(("meta-" + key, response.meta[key]))

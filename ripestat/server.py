@@ -1,5 +1,5 @@
 """
-Module containing a ripestat-text whois server.
+Module containing a ripestat-text whois-style server.
 
 The executable script for the whois service lives at scripts/ripestat-whois.
 """
@@ -12,9 +12,9 @@ from ripestat.api import StatAPI
 from ripestat.core import StatCore, StatCoreParser
 
 
-class StatWhoisServer(object):
+class StatTextServer(object):
     """
-    Class for handling whois interaction with StatCore.
+    Class for handling whois-style interaction with StatCore.
     """
     parser = OptionParser()
     parser.add_option("-p", "--port", default="43")
@@ -38,7 +38,7 @@ class StatWhoisServer(object):
 
 class WhoisLineParser(StatCoreParser):
     """
-    StatCoreParser subclass that responds to input from the whois clients.
+    StatCoreParser subclass that responds to input from whois clients.
     """
     def __init__(self, protocol, *args, **kwargs):
         self.protocol = protocol
