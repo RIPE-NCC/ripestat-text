@@ -62,10 +62,13 @@ class WhoisProtocol(LineReceiver):
     """
     Twisted protocol that passes I/O between the user and StatCore.
     """
+    delimiter = "\n"
+
     def lineReceived(self, line):
         """
         Parse a line of user input and pass it to StatCore.
         """
+        line = line.strip()  # We need to accept trailing \r
         parser = WhoisLineParser(self)
         core = StatCore(self.output, api=self.factory.api,
             parser=parser)
