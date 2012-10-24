@@ -49,4 +49,4 @@ def widget(api, query):
         result.append(("more-specific", suggestion))
 
 
-    return result
+    return data, result

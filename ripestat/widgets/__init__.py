@@ -101,8 +101,10 @@ def default_widget(widget_name, api, query):
     if resource:
         items.append((title, data["resource"]))
         del data["resource"]
-    items.extend(sorted(data.items()))
-    return items
+    for key in sorted(data):
+        if key not in ("query_time", "query_starttime", "query_endtime"):
+            items.append((key, data[key]))
+    return data, items
 
 
 def simple_table(rows):

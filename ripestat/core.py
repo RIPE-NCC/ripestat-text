@@ -71,6 +71,8 @@ class StatCoreParser(OptionParser):
             help="print the ripestat-text version"),
         make_option("--help", "-h", action="store_true",
             help="show this help text"),
+        make_option("-m", "--include-metadata", action="store_true",
+            help="include metadata in the responses"),
     ]
 
     # Widget options
@@ -89,9 +91,6 @@ class StatCoreParser(OptionParser):
             "data calls", action="store_true"),
         make_option("--explain-data-call", help="print help and "
             "methodology for a data call"),
-        make_option("-m", "--include-metadata", action="store_true",
-            help="include the metadata in the data response instead of "
-                "printing data to stdout and messages to stderr"),
         make_option("-a", "--abbreviate-data", action="store_true", help=
             "abbreviate the response to get an idea of the structure"),
         make_option("-s", "--select", help="select particular data item"
@@ -196,7 +195,8 @@ class StatCore(object):
                 template=options.template)
         else:
             self.api.caller_id = "%s/widgets" % self.caller_id
-            return self.output_widgets(options.widgets, query)
+            return self.output_widgets(options.widgets, query,
+                include_metadata=options.include_metadata)
 
     def show_version(self):
         """
@@ -222,7 +222,7 @@ class StatCore(object):
                 widget_defs)
             self.output(line)
 
-    def output_widgets(self, widgets_spec, query):
+    def output_widgets(self, widgets_spec, query, include_metadata=False):
         """
         Carry out queries for the given resource and display results for the
         specified widgets.
@@ -256,6 +256,27 @@ class StatCore(object):
                 except Exception as exc:
                     logging.exception(exc)
                     result = Exception("")
+                else:
+                    response, result = result
+                    queried_time = ""
+                    if response is None:
+                        response = {}
+                    if "query_time" in response:
+                        queried_time += response["query_time"]
+                    else:
+                        if "query_starttime" in response:
+                            queried_time = response["query_starttime"]
+                        if "query_endtime" in response:
+                            if "query_starttime" in response:
+                                queried_time += " to "
+                            else:
+                                queried_time += "since "
+                            queried_time += response["query_endtime"]
+                    if queried_time:
+                        result.append(("query-time", queried_time))
+                    if include_metadata:
+                        for key in response.meta:
+                            result.append(("meta-" + key, response.meta[key]))
                 results_q.put((widget_name, result))
             closure = lambda w=widget, n=widget_name: exec_widget(w, n)
             thread = threading.Thread(target=closure)

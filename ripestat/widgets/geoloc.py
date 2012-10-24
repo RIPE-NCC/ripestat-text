@@ -25,4 +25,4 @@ def widget(api, query):
     for loc_str in simple_table(loc_rows):
         result.append(("location", loc_str))
 
-    return result
+    return data, result

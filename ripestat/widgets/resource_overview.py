@@ -11,6 +11,6 @@ def widget(api, query):
     elif query.resource_type == "ip":
         return prefix_overview.widget(api, query)
     else:
-        return [
+        return None, [
             "This widget supports ASN and IP resources"
         ]

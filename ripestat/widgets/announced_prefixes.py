@@ -6,4 +6,4 @@ def widget(api, query):
     ]
     for prefix in sorted(data["prefixes"], key=lambda x: x["prefix"]):
         result.append(("prefix", prefix["prefix"]))
-    return result
+    return data, result

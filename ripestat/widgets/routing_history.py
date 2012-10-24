@@ -19,4 +19,4 @@ def widget(api, query):
     for value in simple_table(routes):
         result.append(("route", value))
 
-    return result
+    return data, result

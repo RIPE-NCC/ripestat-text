@@ -20,4 +20,4 @@ def widget(api, query):
     else:
         for suggestion in data.get("suggestions", []):
             result.append(("suggestion", suggestion["primary"]["value"]))
-    return result
+    return data, result

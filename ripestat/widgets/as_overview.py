@@ -11,4 +11,4 @@ def widget(api, query):
         result.append(("part-of", data["block"]["resources"] + ": " +
             data["block"]["name"]))
 
-    return result
+    return data, result

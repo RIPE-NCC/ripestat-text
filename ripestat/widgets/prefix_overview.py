@@ -13,4 +13,4 @@ def widget(api, query):
         result.append(("announced-by", asn))
     else:
         result.append(("announced", "no"))
-    return result
+    return data, result
