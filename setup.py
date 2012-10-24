@@ -11,5 +11,5 @@ setup(name='ripestat-text',
       author_email='stat@ripe.net',
       url='https://github.com/RIPE-NCC/ripestat-text',
       packages=find_packages(),
-      scripts=["scripts/ripestat", "scripts/ripestat-whois-server"]
+      scripts=["scripts/ripestat", "scripts/ripestat-text-server"]
      )
