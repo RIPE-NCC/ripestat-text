@@ -8,7 +8,6 @@ from optparse import OptionParser, OptionGroup, make_option
 from string import Formatter  # pylint: disable-msg=W0402
 import logging
 import re
-from Queue import Queue
 import threading
 
 from ripestat import widgets, VERSION
@@ -81,6 +80,9 @@ class StatCoreParser(OptionParser):
             "of widgets and @widget-groups to include in the output"),
         make_option("-l", "--list-widgets", action="store_true", help=
             "output the available widgets and @widget-groups"),
+        make_option("-o", "--preserve-order", action="store_true", help=
+            "force the widgets to be returned in the same order even if some "
+                "are faster than others"),
     ]
 
     # Data options
@@ -123,6 +125,9 @@ class StatCore(object):
     Calling classes can specify their own parser with more options. These
     custom parsers must however be based on StatCore.parser.
     """
+    # Time in seconds before giving up on showing a particular widget in order
+    order_timeout = 0.2
+
     def __init__(self, callback, api, parser=None):
         logging.basicConfig()
         self.logger = logging.getLogger("ripestat")
@@ -196,7 +201,8 @@ class StatCore(object):
         else:
             self.api.caller_id = "%s/widgets" % self.caller_id
             return self.output_widgets(options.widgets, query,
-                include_metadata=options.include_metadata)
+                include_metadata=options.include_metadata,
+                preserve_order=options.preserve_order)
 
     def show_version(self):
         """
@@ -222,7 +228,8 @@ class StatCore(object):
                 widget_defs)
             self.output(line)
 
-    def output_widgets(self, widgets_spec, query, include_metadata=False):
+    def output_widgets(self, widgets_spec, query, include_metadata=False,
+            preserve_order=False):
         """
         Carry out queries for the given resource and display results for the
         specified widgets.
@@ -235,83 +242,93 @@ class StatCore(object):
             else:
                 raise UsageWithHelp()
 
-        lines = []
-
+        header = []
         if "resource" in query:
-            lines.append("Results for '%s'" % query["resource"])
-            lines.append("You can see graphical visualizations at "
+            header.append("Results for '%s'" % query["resource"])
+            header.append("You can see graphical visualizations at "
                 "https://stat.ripe.net/" + query["resource"])
-        lines.append("")
+            self.output_whois(header)
 
         # Execute each widget in parallel
         threads = []
-        results_q = Queue()
         for widget_name in widget_names:
-            widget = widgets.get_widget(widget_name)
-            def exec_widget(widget, widget_name):
-                try:
-                    result = widget(self.api, query)
-                except StatAPI.Error as exc:
-                    result = exc
-                except Exception as exc:
-                    logging.exception(exc)
-                    result = Exception("")
-                else:
-                    response, result = result
-                    time_str = ""
-                    if response is None:
-                        response = {}
-                    if "query_time" in response:
-                        time_str += response["query_time"]
-                    else:
-                        if "query_starttime" in response:
-                            time_str = response["query_starttime"]
-                        if "query_endtime" in response:
-                            if "query_starttime" in response:
-                                time_str += " to "
-                            else:
-                                time_str += "since "
-                            time_str += response["query_endtime"]
-                    if time_str:
-                        result.append(("query-time", time_str))
-                    if include_metadata:
-                        for key in response.meta:
-                            result.append(("meta-" + key, response.meta[key]))
-                results_q.put((widget_name, result))
-            closure = lambda w=widget, n=widget_name: exec_widget(w, n)
+            result = []
+            def closure(widget_name=widget_name, result=result):
+                """
+                Execute a widget and put its result in a list of its own.
+                """
+                lines = self.exec_widget(widget_name, query, include_metadata)
+                result.extend(lines)
             thread = threading.Thread(target=closure)
             thread.daemon = True  # makes the thread die with the controller
-            thread.start()
-            threads.append(thread)
+            threads.append((widget_name, thread, result))
 
+        for thread_info in threads:
+            thread_info[1].start()
+
+        join_timeout = None if preserve_order else self.order_timeout
         # Wait for the widgets to finish rendering
         try:
-            for thread in threads:
-                while thread.isAlive():
-                    thread.join(0.01)
+            while threads:
+                for thread_info in threads[:]:
+                    widget_name, thread, result = thread_info
+                    thread.join(join_timeout)
+                    if not thread.isAlive():
+                        self.output("")
+                        self.output_whois(result)
+                        threads.remove(thread_info)
         except KeyboardInterrupt:
             return
 
-        results = dict(results_q.queue)
+        return 0
 
-        # Output the rendered widgets in the order they were requested
-        for widget_name in widget_names:
-            if isinstance(results[widget_name], Exception):
-                exc = results[widget_name]
+    def exec_widget(self, widget_name, query, include_metadata):
+        """
+        Execute a widget and return a list of output lines.
+        """
+        widget = widgets.get_widget(widget_name)
+        try:
+            result = widget(self.api, query)
+        except StatAPI.Error as exc:
+            result = exc
+        except Exception as exc:
+            if isinstance(exc, StatAPI.Error):
                 message = unicode(exc)
-                if not message:
-                    message = "There was an error rendering this widget."
-                lines.append(u"%s: %s" % (widget_name, message))
             else:
-                lines.extend(results[widget_name])
-            lines.append("")
-        if lines:
-            lines.pop()  # remove final newline
+                message = "There was an error rendering this widget."
 
+            result = [
+                u"%{0}: {1}".format(widget_name, message)
+            ]
+        else:
+            response, result = result
+            time_str = ""
+            if response is None:
+                response = {}
+            if "query_time" in response:
+                time_str += response["query_time"]
+            else:
+                if "query_starttime" in response:
+                    time_str = response["query_starttime"]
+                if "query_endtime" in response:
+                    if "query_starttime" in response:
+                        time_str += " to "
+                    else:
+                        time_str += "since "
+                    time_str += response["query_endtime"]
+            if time_str:
+                result.append(("query-time", time_str))
+            if include_metadata:
+                for key in response.meta:
+                    result.append(("meta-" + key, response.meta[key]))
+        return result
+
+    def output_whois(self, lines):
+        """
+        Output the given lines in a whois style format.
+        """
         output = WhoisSerializer().dumps(lines)
         self.output(output)
-
-        return 0
 
     def get_widgets(self, widget_names, resource_type):
         """
