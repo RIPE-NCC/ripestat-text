@@ -44,7 +44,8 @@ class WhoisSerializer(object):
 
         return items
 
-    def dumps(self, native, plugin=None, **kwargs):  #pylint: disable-msg=W0613
+    def dumps(self, native, plugin=None, min_key_width=None,
+            **kwargs):  #pylint: disable-msg=W0613
         """
         Dump 'native' to a whois-style string.
         """
@@ -55,14 +56,19 @@ class WhoisSerializer(object):
             native[plugin] = ""
 
         parts = self.get_items(native)
-        longest_key = 0
+
+        key_width = 0
         for part in parts:
             if not isinstance(part, basestring):
-                longest_key = max(longest_key, len(part[0] or ""))
+                key_width = max(key_width, len(part[0] or ""))
+        key_width += 4
+        if min_key_width:
+            key_width = max(min_key_width, key_width)
+
         lines = []
         for part in parts:
             if isinstance(part, basestring):
                 lines.append(part)
             else:
-                lines.append((part[0] + ":").ljust(longest_key + 4) + part[1])
+                lines.append((part[0] + ":").ljust(key_width) + part[1])
         return "\n".join(lines)

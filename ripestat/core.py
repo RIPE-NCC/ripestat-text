@@ -127,6 +127,8 @@ class StatCore(object):
     """
     # Time in seconds before giving up on showing a particular widget in order
     order_timeout = 0.2
+    # Width of the key fields on the left in unordered mode
+    unordered_key_width = 20
 
     def __init__(self, callback, api, parser=None):
         logging.basicConfig()
@@ -143,6 +145,8 @@ class StatCore(object):
             self.parser = parser
         else:
             self.parser = StatCoreParser()
+
+        self.serializer = WhoisSerializer()
 
     def main(self, args):
         """
@@ -261,22 +265,34 @@ class StatCore(object):
                 result.extend(lines)
             thread = threading.Thread(target=closure)
             thread.daemon = True  # makes the thread die with the controller
-            threads.append((widget_name, thread, result))
+            threads.append((thread, result))
 
-        for thread_info in threads:
-            thread_info[1].start()
+        for thread, result in threads:
+            thread.start()
 
-        join_timeout = None if preserve_order else self.order_timeout
-        # Wait for the widgets to finish rendering
+        # Output the widgets
         try:
-            while threads:
-                for thread_info in threads[:]:
-                    widget_name, thread, result = thread_info
-                    thread.join(join_timeout)
-                    if not thread.isAlive():
-                        self.output("")
-                        self.output_whois(result)
-                        threads.remove(thread_info)
+            if preserve_order:
+                # Render each widget in order, using a dynamically calculated
+                # key width
+                results = []
+                for thread, result in threads:
+                    thread.join(None)
+                    results.append("")
+                    results.extend(result)
+                self.output_whois(results)
+            else:
+                # Render the widgets as they become available (loosely in
+                # order) using a constant minimum key width
+                while threads:
+                    for thread_info in threads[:]:
+                        thread, result = thread_info
+                        thread.join(self.order_timeout)
+                        if not thread.isAlive():
+                            self.output("")
+                            self.output_whois(result,
+                                min_key_width=self.unordered_key_width)
+                            threads.remove(thread_info)
         except KeyboardInterrupt:
             return
 
@@ -323,11 +339,11 @@ class StatCore(object):
                     result.append(("meta-" + key, response.meta[key]))
         return result
 
-    def output_whois(self, lines):
+    def output_whois(self, lines, **kwargs):
         """
         Output the given lines in a whois style format.
         """
-        output = WhoisSerializer().dumps(lines)
+        output = self.serializer.dumps(lines, **kwargs)
         self.output(output)
 
     def get_widgets(self, widget_names, resource_type):
