@@ -3,6 +3,8 @@ Module containing functions for loading widgets, as well as some basic common
 functionality shared by various widgets.
 """
 from functools import partial
+import os.path
+import pkgutil
 
 
 # This structure will be replaced with dynamic interaction with the server.
@@ -65,13 +67,12 @@ def get_widget(widget_name):
 
 def get_widget_list():
     """
-    Get a list of lines describing every defined widget.
+    Get a list of lines describing every installed widget.
     """
+    dirname = os.path.dirname(__file__)
     rows = []
-    for group in GROUPS.values():
-        for widget in group["widgets"]:
-            row = widget["name"], ",".join(widget["resource-types"])
-            rows.append(row)
+    for _, name, _ in pkgutil.iter_modules([dirname]):
+        rows.append(name)
     rows.sort()
     return simple_table(rows)
 
