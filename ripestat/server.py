@@ -75,19 +75,19 @@ class WhoisProtocol(LineReceiver):
     delimiter = "\n"
 
     def connectionMade(self):
+        """
+        Initialize state when the client connects.
+        """
         self.responding = Lock()
-        self.outputs = Queue()
 
     def lineReceived(self, line):
         """
         Parse a line of user input and pass it to StatCore.
         """
-        args = line.strip().split()  # We need to accept trailing \r
+        params = line.strip().split()  # We need to accept trailing \r
         if self.responding.locked():
             return
-        reactor.callInThread(self.respond_to_input, args)
 
-    def respond_to_input(self, params):
         self.responding.acquire()
 
         parser = WhoisLineParser(self)
@@ -96,24 +96,16 @@ class WhoisProtocol(LineReceiver):
         core = StatCore(self.output, api=self.factory.api, parser=parser)
         core.main(params)
 
-        self.outputs.join()
         self.transport.loseConnection()
         self.responding.release()
-
-    def send_one_output(self):
-        """
-        Take a single line from the queue and send it to the client.
-        """
-        output = self.outputs.get()
-        self.sendLine(output)
-        self.outputs.task_done()
 
     def output(self, line):
         """
         Callback method to allow StatCore to send output over the network.
         """
-        self.outputs.put(line.encode("utf-8"))
-        reactor.callFromThread(self.send_one_output)
+        self.sendLine(line.encode("utf-8"))
+        # Force the line to be sent before giving control back to the reactor
+        self.transport.doWrite()
 
 
 class WhoisFactory(Factory):
