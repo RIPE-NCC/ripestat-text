@@ -1,10 +1,71 @@
 #!/usr/bin/env python
+"""
+Twisted TAC for ripestat-text-server file that can also be executed directly.
 
+Options can be passed to twistd by using -- as a seperator.
+
+For example:
+
+ripestat-text-server -b stat_option -- --pidfile /var/run/custompidfile.pid
+"""
+
+import os
 import sys
+from optparse import OptionParser, make_option
+from ripestat.server import StatTextFactory
+from twisted.application import service, internet
+from twisted.python import usage
 
-from ripestat.server import StatTextServer
+from twisted.scripts.twistd import runApp, ServerOptions
+
+
+PROG_NAME = "ripestat-text-server"
+
+TWISTD_OPTIONS = [
+    "-y", __file__,
+    "-u", "nobody",
+    "-g", "nobody",
+    "--pidfile", "%s.pid" % PROG_NAME,
+    "--logfile", "%s.log" % PROG_NAME,
+]
+
+
+class StatTextServerParser(OptionParser):
+
+    standard_option_list = [
+        make_option("-p", "--port", default="43"),
+        make_option("-b", "--base-url",
+            default="https://stat.ripe.net/data/"),
+        make_option("-i", "--interface", action="append" ),
+    ]
+
+
+application = service.Application("RIPEstat Text Server")
+
+# Collect stat params (before --) and twistd params (after --)
+stat_params = []
+twistd_params = TWISTD_OPTIONS
+params = stat_params
+for arg in sys.argv[1:]:
+    if arg == "--":
+        params = twistd_params
+    else:
+        params.append(arg)
+
+sys.argv[0] = PROG_NAME
+options, args = StatTextServerParser().parse_args(stat_params)
+service = internet.TCPServer(int(options.port), StatTextFactory(
+    base_url=options.base_url))
+service.setServiceParent(application)
 
 
 if __name__ == "__main__":
-    server = StatTextServer(sys.argv[1:])
-    server.start()
+    # Equivalent to running twistd -y PATH/TO/THIS-FILE
+    config = ServerOptions()
+    try:
+        config.parseOptions(twistd_params)
+    except usage.error, ue:
+        print config
+        print "%s: %s" % (sys.argv[0], ue)
+    else:
+        ret = runApp(config)
