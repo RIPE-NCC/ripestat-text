@@ -8,8 +8,6 @@ For example:
 
 ripestat-text-server -b stat_option -- --pidfile /var/run/custompidfile.pid
 """
-
-import os
 import sys
 from optparse import OptionParser, make_option
 from ripestat.server import StatTextFactory
