@@ -3,21 +3,26 @@ Module containing a ripestat-text whois-style server.
 
 The executable script for the whois service lives at scripts/ripestat-whois.
 """
-from optparse import OptionParser  #, make_option
-from Queue import Queue
-from threading import Lock
+from optparse import OptionParser
+import logging
 
+from twisted.internet import reactor
+from twisted.internet.error import CannotListenError
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
-from twisted.internet import reactor
 
 from ripestat.api import StatAPI
 from ripestat.core import StatCore, StatCoreParser
 
 
+logging.basicConfig()
+LOG = logging.getLogger(__name__)
+
+
 class StatTextServer(object):
     """
     Class for handling whois-style interaction with StatCore.
+                LOG.exception(exc)
     """
     parser = OptionParser()
     parser.add_option("-p", "--port", default="43")
@@ -30,13 +35,23 @@ class StatTextServer(object):
 
     def start(self):
         """
-        Start listening on the given port.
+        Start the server with the provided options.
         """
         factory = WhoisFactory(self.options.base_url)
+        success = False
         for interface in (self.options.interface or ["::"]):
-            reactor.listenTCP(int(self.options.port), factory,
-                interface=interface)
-        reactor.run()
+            try:
+                reactor.listenTCP(int(self.options.port), factory,
+                    interface=interface)
+            except CannotListenError as exc:
+                LOG.error(exc)
+            else:
+                success |= True
+        if success:
+            reactor.run()
+        else:
+            LOG.error("Couldn't listen on any ports. Exiting.")
+            return -1
 
 
 class WhoisLineParser(StatCoreParser):
@@ -78,17 +93,29 @@ class WhoisProtocol(LineReceiver):
         """
         Initialize state when the client connects.
         """
-        self.responding = Lock()
+        # Get the reader instance for this protocol
+        readers = reactor.getReaders()
+        for reader in readers:
+            if getattr(reader, "protocol", None) == self:
+                self.reader = reader
+                break
 
     def lineReceived(self, line):
         """
         Parse a line of user input and pass it to StatCore.
         """
-        params = line.strip().split()  # We need to accept trailing \r
-        if self.responding.locked():
-            return
+        # Don't accept any more data yet
+        # This stops netcat from quitting before it gets the output!
+        reactor.removeReader(self.reader)
+        # Render the widgets in a separate thread
+        reactor.callInThread(self.respond_to_client, line)
 
-        self.responding.acquire()
+    def respond_to_client(self, line):
+        """
+        Execute the appropriate widgets and queue the output for sending from
+        the main thread.
+        """
+        params = line.strip().split()  # We need to accept trailing \r
 
         parser = WhoisLineParser(self)
         options, args = parser.parse_args(params)
@@ -96,16 +123,15 @@ class WhoisProtocol(LineReceiver):
         core = StatCore(self.output, api=self.factory.api, parser=parser)
         core.main(params)
 
-        self.transport.loseConnection()
-        self.responding.release()
+        reactor.callFromThread(self.transport.loseConnection)
 
     def output(self, line):
         """
         Callback method to allow StatCore to send output over the network.
+
+        Each line is queued in the main thread for sending.
         """
-        self.sendLine(line.encode("utf-8"))
-        # Force the line to be sent before giving control back to the reactor
-        self.transport.doWrite()
+        reactor.callFromThread(self.sendLine, line.encode("utf-8"))
 
 
 class WhoisFactory(Factory):
