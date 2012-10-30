@@ -36,7 +36,11 @@ class StatTextProtocol(LineOnlyReceiver):
                 break
         self.keep_alive = False
         self.input_lines = Queue()
-        log.msg("Connection from {0}".format(self.transport.getPeer()))
+        client = self.transport.getPeer()
+        log.msg("Connection from {0}".format(client))
+
+        self.api = StatAPI("whois", self.factory.base_url,
+            headers=[("X-Forwarded-For", client.host)])
 
     def dataReceived(self, data):
         """
@@ -83,8 +87,7 @@ class StatTextProtocol(LineOnlyReceiver):
 
         # Render the widgets if the input wasn't a single keep_alive flag
         if not (options.keep_alive and not args):
-            core = StatCore(self.queueLine, api=self.factory.api,
-                parser=parser)
+            core = StatCore(self.queueLine, api=self.api, parser=parser)
             core.main(params)
 
         if options.keep_alive:
@@ -106,7 +109,7 @@ class StatTextFactory(Factory):
     protocol = StatTextProtocol
 
     def __init__(self, base_url):
-        self.api = StatAPI("whois", base_url)
+        self.base_url = base_url
 
 
 class StatTextLineParser(StatCoreParser):

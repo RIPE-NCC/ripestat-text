@@ -41,7 +41,7 @@ class StatAPI(object):
             StatAPI.Error.__init__(self, "expected version {1}.x of the '{0}' "
                 "data call; found {2}".format(call, requested, actual))
 
-    def __init__(self, caller_id, base_url=DATA_API, token=None):
+    def __init__(self, caller_id, base_url=DATA_API, headers=None, token=None):
         self.base_url = base_url
 
         self.cookiejar = StatCookieJar(token)
@@ -58,6 +58,8 @@ class StatAPI(object):
         # The caller_id is added to the User-Agent header.
         # It can be changed after instantiation.
         self.caller_id = caller_id
+
+        self.headers = headers
 
     def get_session(self):
         """
@@ -111,6 +113,9 @@ class StatAPI(object):
         if self.caller_id:
             ua_parts = [self.caller_id] + ua_parts
         url.add_header("User-agent", " ".join(ua_parts))
+        if self.headers:
+            for header in self.headers:
+                url.add_header(*header)
         return self.opener.open(url, *args, **kwargs)
 
 
