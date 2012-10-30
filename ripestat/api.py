@@ -7,7 +7,7 @@ try:
 except ImportError:
     import json
 
-from ripestat import VERSION
+from ripestat import __version__
 
 
 class StatAPI(object):
@@ -51,7 +51,7 @@ class StatAPI(object):
 
         # These are the parts of the User-Agent that stay constant
         self.ua_parts = [
-            "ripestat-text/%s" % VERSION,
+            "ripestat-text/%s" % __version__,
             "python/" + ".".join(str(v) for v in sys.version_info[:3]),
             "platform/" + sys.platform
         ]

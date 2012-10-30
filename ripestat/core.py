@@ -10,7 +10,7 @@ import logging
 import re
 import threading
 
-from ripestat import widgets, VERSION
+from ripestat import widgets, __version__
 from ripestat.api import StatAPI, json
 from ripestat.whois import WhoisSerializer
 
@@ -212,7 +212,7 @@ class StatCore(object):
         """
         Output the public ripestat-text version label.
         """
-        self.output(unicode(VERSION))
+        self.output(unicode(__version__))
 
     ################################################
     # Methods for working with ripestat-text widgets

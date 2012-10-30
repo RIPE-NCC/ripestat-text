@@ -2,11 +2,11 @@
 
 from setuptools import setup, find_packages
 
-from ripestat import VERSION
+from ripestat import __version__
 
 
 setup(name='ripestat-text',
-      version=VERSION,
+      version=__version__,
       description='Text mode utils for RIPEstat',
       author_email='stat@ripe.net',
       url='https://github.com/RIPE-NCC/ripestat-text',
