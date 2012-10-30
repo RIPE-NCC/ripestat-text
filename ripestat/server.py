@@ -126,7 +126,7 @@ class StatTextLineParser(StatCoreParser):
 
     def print_help(self, *args, **kwargs):
         for line in  self.format_option_help().split("\n"):
-            self.protocol.output(line)
+            self.protocol.queueLine(line)
 
     def print_usage(self, *args, **kwargs):
         self.print_help()
