@@ -40,7 +40,7 @@ class StatTextServerParser(OptionParser):
         make_option("-p", "--port", default="43"),
         make_option("-b", "--base-url",
             default="https://stat.ripe.net/data/"),
-        make_option("-i", "--interface", action="append" ),
+        make_option("-i", "--interface", default="::"),
     ]
 
 
@@ -59,7 +59,7 @@ for arg in sys.argv[1:]:
 sys.argv[0] = PROG_NAME
 options, args = StatTextServerParser().parse_args(stat_params)
 service = internet.TCPServer(int(options.port), StatTextFactory(
-    base_url=options.base_url))
+    base_url=options.base_url), interface=options.interface)
 service.setServiceParent(application)
 
 
