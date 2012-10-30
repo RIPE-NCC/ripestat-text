@@ -8,6 +8,7 @@ For example:
 
 ripestat-text-server -b stat_option -- --pidfile /var/run/custompidfile.pid
 """
+import os
 import sys
 from optparse import OptionParser, make_option
 from ripestat.server import StatTextFactory
@@ -21,11 +22,16 @@ PROG_NAME = "ripestat-text-server"
 
 TWISTD_OPTIONS = [
     "-y", __file__,
-    "-u", "nobody",
-    "-g", "nobody",
     "--pidfile", "%s.pid" % PROG_NAME,
     "--logfile", "%s.log" % PROG_NAME,
 ]
+
+# If we have root then we have to drop it
+if os.geteuid() == 0:
+    TWISTD_OPTIONS.extend([
+        "-u", "nobody",
+        "-g", "nobody",
+    ])
 
 
 class StatTextServerParser(OptionParser):
