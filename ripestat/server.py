@@ -4,19 +4,18 @@ Module containing a ripestat-text whois-style server.
 The executable script for the whois service lives at scripts/ripestat-whois.
 """
 from optparse import make_option
-import logging
 from Queue import Queue
 
 from twisted.internet import reactor
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineOnlyReceiver
+from twisted.python import log
 
 from ripestat.api import StatAPI
 from ripestat.core import StatCore, StatCoreParser
 
 
-logging.basicConfig()
-LOG = logging.getLogger(__name__)
+log.PythonLoggingObserver().start()
 
 
 class StatTextProtocol(LineOnlyReceiver):
@@ -37,6 +36,7 @@ class StatTextProtocol(LineOnlyReceiver):
                 break
         self.keep_alive = False
         self.input_lines = Queue()
+        log.msg("Connection from {0}".format(self.transport.getPeer()))
 
     def dataReceived(self, data):
         """
@@ -53,6 +53,7 @@ class StatTextProtocol(LineOnlyReceiver):
         """
         Parse a line of user input and render the widgets.
         """
+        log.msg("Query: {1!r}".format(self.transport.getPeer().host, line))
         self.input_lines.put(line)
 
     def processLines(self):
