@@ -10,10 +10,11 @@ import os
 import sys
 
 from ripestat.api import StatAPI
-from ripestat.core import StatCore, StatCoreParser
+from ripestat.core import StatCore
+from ripestat.parser import BaseParser
 
 
-class StatCLIParser(StatCoreParser):
+class StatCLIParser(BaseParser):
     """
     Parser that knows about CLI specific options.
     """
@@ -34,7 +35,7 @@ class StatCLIParser(StatCoreParser):
     ]
 
     def __init__(self, *args, **kwargs):
-        StatCoreParser.__init__(self, *args, **kwargs)
+        BaseParser.__init__(self, *args, **kwargs)
 
         auth_group = OptionGroup(self, "Authentication Options")
         for option in self.auth_option_list:

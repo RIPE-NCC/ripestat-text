@@ -12,7 +12,8 @@ from twisted.protocols.basic import LineOnlyReceiver
 from twisted.python import log
 
 from ripestat.api import StatAPI
-from ripestat.core import StatCore, StatCoreParser
+from ripestat.core import StatCore
+from ripestat.parser import BaseParser
 
 
 log.PythonLoggingObserver().start()
@@ -112,9 +113,9 @@ class StatTextFactory(Factory):
         self.base_url = base_url
 
 
-class StatTextLineParser(StatCoreParser):
+class StatTextLineParser(BaseParser):
     """
-    StatCoreParser subclass that responds to input from whois clients.
+    BaseParser subclass that responds to input from whois clients.
     """
     whois_option_list = [
         make_option("-k", "--keep-alive", action="store_true",
@@ -123,7 +124,7 @@ class StatTextLineParser(StatCoreParser):
 
     def __init__(self, protocol, *args, **kwargs):
         self.protocol = protocol
-        StatCoreParser.__init__(self, *args, **kwargs)
+        BaseParser.__init__(self, *args, **kwargs)
         for option in self.whois_option_list:
             self.add_option(option)
 
