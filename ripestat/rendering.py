@@ -2,11 +2,15 @@
 Contains the text widget rendering functionality.
 """
 from abc import ABCMeta
+import logging
 import threading
 
 from ripestat import widgets
 from ripestat.api import StatAPI
 from ripestat.parser import UserError
+
+
+LOG = logging.getLogger(__name__)
 
 
 class WidgetRenderer(object):
@@ -135,6 +139,7 @@ class WidgetRenderer(object):
                 message = unicode(exc)
             else:
                 message = "There was an error rendering this widget."
+                logging.exception(exc)
 
             result = [
                 u"%{0}: {1}".format(widget_name, message)
