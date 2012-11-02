@@ -8,33 +8,29 @@ For example:
 
 ripestat-text-server -b stat_option -- --pidfile /var/run/custompidfile.pid
 """
-import os
-import sys
 from optparse import OptionParser, make_option
 from ripestat.server import StatTextFactory
+import multiprocessing
+import os
+import signal
+import sys
+
 from twisted.application import service, internet
 from twisted.python import usage
-from twisted.internet import reactor
-
+from twisted.scripts._twistd_unix import daemonize
 from twisted.scripts.twistd import runApp, ServerOptions
 
 
 PROG_NAME = "ripestat-text-server"
 DEFAULT_PID_FILE = "%s.pid" % PROG_NAME
 DEFAULT_LOG_FILE = "%s.log" % PROG_NAME
+WATCH_FREQUENCY = 5  # time in seconds between polling for file changes
 
 TWISTD_OPTIONS = [
     "-y", __file__,
     "--pidfile", DEFAULT_PID_FILE,
     "--logfile", DEFAULT_LOG_FILE,
 ]
-
-# If we have root then we have to drop it
-if os.geteuid() == 0:
-    TWISTD_OPTIONS.extend([
-        "-u", "nobody",
-        "-g", "nobody",
-    ])
 
 
 class StatTextServerParser(OptionParser):
@@ -48,63 +44,100 @@ class StatTextServerParser(OptionParser):
     ]
 
 
-application = service.Application("RIPEstat Text Server")
+def parse_params():
+    """
+    Collect stat params (before --) and twistd params (after --)
+    """
+    stat_params = []
+    twistd_params = TWISTD_OPTIONS
 
-# Collect stat params (before --) and twistd params (after --)
-stat_params = []
-twistd_params = TWISTD_OPTIONS
-params = stat_params
-for arg in sys.argv[1:]:
-    if arg == "--":
-        params = twistd_params
-    else:
-        params.append(arg)
-
-argv_0 = sys.argv[0]
-sys.argv[0] = PROG_NAME
-options, args = StatTextServerParser().parse_args(stat_params)
-sys.argv[0] = argv_0
-service = internet.TCPServer(int(options.port), StatTextFactory(
-    base_url=options.base_url), interface=options.interface)
-service.setServiceParent(application)
-
-
-_RESTART = False
-_PIDFILE = None
-_MTIME = None
+    # If we have root then we have to drop it
+    if os.geteuid() == 0:
+        twistd_params.extend([
+            "-u", "nobody",
+            "-g", "nobody",
+        ])
+    params = stat_params
+    for arg in sys.argv[1:]:
+        if arg == "--":
+            params = twistd_params
+        else:
+            params.append(arg)
+    return stat_params, twistd_params
 
 
-def check_for_update():
-    global _RESTART
 
-    mtime = os.stat(options.watch_file).st_mtime
-    if mtime > _MTIME:
-        print options.watch_file, "has changed: restarting"
-        _RESTART = True
-        reactor.stop()
-    reactor.callLater(5, check_for_update)
+def setup_twisted_app(options):
+    """
+    Createa a twisted Application for the RIPEstat text server.
+    """
+    application = service.Application("RIPEstat Text Server")
 
-
-def maybe_restart():
-    if _RESTART:
-        if _PIDFILE:
-            os.unlink(_PIDFILE)
-        os.execv(sys.argv[0], sys.argv)
+    tcp_service = internet.TCPServer(int(options.port), StatTextFactory(
+        base_url=options.base_url), interface=options.interface)
+    tcp_service.setServiceParent(application)
+    return application
 
 
-if __name__ == "__main__":
-    # Equivalent to running twistd -y PATH/TO/THIS-FILE
+def twistd(params):
+    """
+    Equivalent to running twistd -y PATH/TO/THIS-FILE
+    """
     config = ServerOptions()
     try:
-        config.parseOptions(twistd_params)
+        config.parseOptions(params)
     except usage.error, ue:
         print config
         print "%s: %s" % (sys.argv[0], ue)
     else:
-        _PIDFILE = config["pidfile"]
-        if options.watch_file:
-            _MTIME = os.stat(options.watch_file).st_mtime
-            reactor.callLater(5, check_for_update)
-            reactor.addSystemEventTrigger("after", "shutdown", maybe_restart)
+        runApp(config)
 
-        ret = runApp(config)
+
+def handle_sigterm(pid):
+    """
+    Ask the child to gracefully shut down when the parent does.
+    """
+    os.kill(pid, signal.SIGINT)
+
+
+def watch(target, params, watch_file):
+    """
+    Run the service, restarting it whenever a given file is modified.
+    """
+    print "Watching {0} for changes...".format(watch_file)
+    if "-n" not in params:
+        # Daemonize the watcher unless -n was supplied
+        daemonize(None, os)
+    params.append("-n")  # We don't want our child to daemonize itself
+    while True:
+        mtime = os.stat(watch_file).st_mtime
+
+        process = multiprocessing.Process(target=lambda: target(params))
+        process.daemon = True
+        process.start()
+        signal.signal(signal.SIGTERM, lambda a, b: handle_sigterm(process.pid))
+        signal.signal(signal.SIGINT, lambda a, b: handle_sigterm(process.pid))
+
+        do_restart = False
+        while process.is_alive():
+            process.join(WATCH_FREQUENCY)
+            if do_restart:
+                continue  # we are waiting for the child to die
+            cur_mtime = os.stat(watch_file).st_mtime
+            if mtime != cur_mtime:
+                print watch_file, "has changed: restarting"
+                # Send a graceful exit signal
+                do_restart = True
+                os.kill(process.pid, signal.SIGINT)
+        if not do_restart:
+            break
+
+_stat_params, _twistd_params = parse_params()
+_stat_options, _stat_args = StatTextServerParser().parse_args(_stat_params)
+application = setup_twisted_app(_stat_options)
+
+if __name__ == "__main__":
+    if _stat_options.watch_file:
+        watch(twistd, _twistd_params, _stat_options.watch_file)
+    else:
+        twistd(_twistd_params)
