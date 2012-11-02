@@ -89,7 +89,8 @@ def check_for_update():
 
 def maybe_restart():
     if _RESTART:
-        os.unlink(_PIDFILE)
+        if _PIDFILE:
+            os.unlink(_PIDFILE)
         os.execv(sys.argv[0], sys.argv)
 
 
