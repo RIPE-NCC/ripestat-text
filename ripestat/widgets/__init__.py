@@ -24,7 +24,7 @@ GROUPS = {
                 "resource-types": ["ip", "asn"]
             },
             {
-                "name": "object-browser",
+                "name": "registry-browser",
                 "resource-types": ["ip", "asn"]
             },
             {

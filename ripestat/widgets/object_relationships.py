@@ -1,1 +1,1 @@
-from ripestat.widgets.object_browser import *
+from ripestat.widgets.registry_browser import *
