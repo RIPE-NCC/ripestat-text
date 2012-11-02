@@ -29,8 +29,6 @@ TWISTD_OPTIONS = [
     "--logfile", DEFAULT_LOG_FILE,
 ]
 
-MTIME = os.stat(__file__).st_mtime
-
 # If we have root then we have to drop it
 if os.geteuid() == 0:
     TWISTD_OPTIONS.extend([
@@ -46,8 +44,7 @@ class StatTextServerParser(OptionParser):
         make_option("-b", "--base-url",
             default="https://stat.ripe.net/data/"),
         make_option("-i", "--interface", default="::"),
-        make_option("-r", "--restart-on-update", action="store_true",
-            default=False),
+        make_option("-w", "--watch-file"),
     ]
 
 
@@ -74,14 +71,15 @@ service.setServiceParent(application)
 
 _RESTART = False
 _PIDFILE = None
+_MTIME = None
 
 
 def check_for_update():
     global _RESTART
 
-    mtime = os.stat(__file__).st_mtime
-    if mtime > MTIME:
-        print __file__, "has changed: restarting"
+    mtime = os.stat(options.watch_file).st_mtime
+    if mtime > _MTIME:
+        print options.watch_file, "has changed: restarting"
         _RESTART = True
         reactor.stop()
     reactor.callLater(5, check_for_update)
@@ -104,7 +102,8 @@ if __name__ == "__main__":
         print "%s: %s" % (sys.argv[0], ue)
     else:
         _PIDFILE = config["pidfile"]
-        if options.restart_on_update:
+        if options.watch_file:
+            _MTIME = os.stat(options.watch_file).st_mtime
             reactor.callLater(5, check_for_update)
             reactor.addSystemEventTrigger("after", "shutdown", maybe_restart)
 
