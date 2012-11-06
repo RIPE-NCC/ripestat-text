@@ -41,6 +41,7 @@ class StatTextServerParser(OptionParser):
             default="https://stat.ripe.net/data/"),
         make_option("-i", "--interface", default="::"),
         make_option("-w", "--watch-file"),
+        make_option("--dont-log", action="append"),
     ]
 
 
@@ -69,12 +70,13 @@ def parse_params():
 
 def setup_twisted_app(options):
     """
-    Createa a twisted Application for the RIPEstat text server.
+    Create a twisted Application for the RIPEstat text server.
     """
     application = service.Application("RIPEstat Text Server")
 
     tcp_service = internet.TCPServer(int(options.port), StatTextFactory(
-        base_url=options.base_url), interface=options.interface)
+        base_url=options.base_url, dont_log=options.dont_log),
+        interface=options.interface)
     tcp_service.setServiceParent(application)
     return application
 

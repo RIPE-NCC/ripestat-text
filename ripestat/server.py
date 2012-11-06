@@ -38,7 +38,8 @@ class StatTextProtocol(LineOnlyReceiver):
         self.keep_alive = False
         self.input_lines = Queue()
         client = self.transport.getPeer()
-        log.msg("Connection from {0}".format(client))
+        if client.host not in self.factory.dont_log:
+            log.msg("Connection from {0}".format(client))
 
         self.api = StatAPI("whois", self.factory.base_url,
             headers=[("X-Forwarded-For", client.host)])
@@ -58,7 +59,9 @@ class StatTextProtocol(LineOnlyReceiver):
         """
         Parse a line of user input and render the widgets.
         """
-        log.msg("Query: {1!r}".format(self.transport.getPeer().host, line))
+        client = self.transport.getPeer()
+        if client.host not in self.factory.dont_log:
+            log.msg("Query: {1!r}".format(client.host, line))
         self.input_lines.put(line)
 
     def processLines(self):
@@ -109,8 +112,12 @@ class StatTextFactory(Factory):
     """
     protocol = StatTextProtocol
 
-    def __init__(self, base_url):
+    def __init__(self, base_url, dont_log=None):
         self.base_url = base_url
+        if dont_log:
+            self.dont_log = dont_log
+        else:
+            self.dont_log = []
 
 
 class StatTextLineParser(BaseParser):
