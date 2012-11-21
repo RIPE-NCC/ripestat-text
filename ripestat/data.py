@@ -53,24 +53,23 @@ class DataProcessor(object):
                 level = getattr(logging, message[0].upper())
                 self.logger.log(level, message[1])
 
+        if select is not None:
+            select = select.split(".")
+            data = self.select(data, select)
+            if not template and not abbreviate:
+                template = "{0}"
+
         if abbreviate:
             data = self.abbreviate_lists(data)
 
-        if select is not None or template is not None:
-            if select:
-                select = select.split(".")
-            else:
-                select = []
-            data = self.select(data, select)
+        if template is not None:
             formatter = DataFormatter()
-
-            if template is None:
-                template = "{0}"
-            else:
-                template = template.decode("utf-8")
-            output = formatter.format_data(template, data)
+            output = formatter.format_data(template.decode("utf-8"), data)
         else:
             output = json.dumps(data, indent=4)
+            if abbreviate:
+                output = output.replace('"' + self.ellipsis_marker + '"',
+                    "...")
 
         self.output(output)
 
@@ -78,6 +77,7 @@ class DataProcessor(object):
             if response.meta.get("cached", False):
                 self.logger.log(logging.INFO, "This response was cached")
 
+    ellipsis_marker = "...abbreviate_lists_ELLIPSIS..."
     def abbreviate_lists(self, data, insert_ellipsis=True, top_level=True):
         """
         Recursively remove all but the first item in lists.
@@ -87,7 +87,7 @@ class DataProcessor(object):
             data = [self.abbreviate_lists(data[0], insert_ellipsis,
                 False)]
             if insert_ellipsis:
-                data.append("...")
+                data.append(self.ellipsis_marker)
         elif isinstance(data, dict):
             return dict((k, self.abbreviate_lists(data[k], insert_ellipsis,
                 False)) for k in data)
