@@ -13,7 +13,20 @@ from ripestat import __version__
 class StatAPI(object):
     """
     A Python wrapper around the RIPEstat Data API.
+
+    Usage:
+        from ripestat.api import StatAPI
+        api = StatAPI("My Client Name")
+        api.get_data(<resourcename>, {"resource": <someresource>})
+
+    Example (Basic request):
+        api.get_data("geoloc", {"resource": "193.0.6.139/24"})
+
+    Example (Fetch the meta data):
+        api.get_data("geoloc", {"resource": "193.0.6.139/24"}).meta
+
     """
+
     RIPE_ACCESS = "https://access.ripe.net"
     DATA_API = "https://stat.ripe.net/data/"
 
@@ -26,6 +39,7 @@ class StatAPI(object):
         """
         Raised when an unsuccesful response is received from the server.
         """
+        args = ()
         def __init__(self, http_error):
             serialized = http_error.read()
             self.response = json.loads(serialized)
