@@ -1,5 +1,5 @@
 def widget(api, query):
-    data = api.get_data("prefix-overview", query, version=0)
+    data = api.get_data("prefix-overview", query, version=1)
 
     result = [
         ("prefix-overview", data["resource"]),
@@ -8,9 +8,11 @@ def widget(api, query):
         result.append(("part-of", data["block"]["resources"] + ": " +
             data["block"]["name"]))
     if data["announced"]:
-        asn = "%s [%s]" % (data["asn"], data["holder"])
+	asns = []
+	for asn_obj in data["asns"]:
+	    asns.append("AS%s [%s]" % (asn_obj["asn"], asn_obj["holder"]))
         result.append(("announced", "yes"))
-        result.append(("announced-by", asn))
+        result.append(("announced-by", ",".join(asns)))
     else:
         result.append(("announced", "no"))
     return data, result
