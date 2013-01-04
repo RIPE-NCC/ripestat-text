@@ -3,7 +3,7 @@ def widget(api, query):
 
     result = [
         ("as-overview", data["resource"]),
-        ("announced", "yes" if data["announced"] else "no"),
+        ("announcing-prefixes", "yes" if data["announced"] else "no"),
     ]
     if data["holder"]:
         result.append(("description", data["holder"]))
