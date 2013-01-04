@@ -87,10 +87,14 @@ class StatCore(DataProcessor, WidgetRenderer):
                     show_help=True)
         elif options.data_call:
             self.api.caller_id += "/data-call"
-            return self.output_data(options.data_call, query,
-                include_metadata=options.include_metadata,
-                abbreviate=options.abbreviate_data, select=options.select,
-                template=options.template)
+            try:
+                return self.output_data(options.data_call, query,
+                    include_metadata=options.include_metadata,
+                    abbreviate=options.abbreviate_data, select=options.select,
+                    template=options.template)
+            except self.api.ServerError as exc:
+                if exc.status_code == 400:
+                    raise UserError(exc.args[0], show_help=False)
         else:
             self.api.caller_id += "/widgets"
             return self.output_widgets(options.widgets, query,

@@ -72,6 +72,6 @@ class UserError(Exception):
     This is raised when the user has supplied funny parameters and may or may
     not need to be reminded of the usage.
     """
-    def __init__(self, show_help=False, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        self.show_help = kwargs.pop("show_help")
         Exception.__init__(self, *args, **kwargs)
-        self.show_help = show_help

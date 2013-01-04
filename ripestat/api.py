@@ -39,12 +39,12 @@ class StatAPI(object):
         """
         Raised when an unsuccesful response is received from the server.
         """
-        args = ()
         def __init__(self, http_error):
-            serialized = http_error.read()
-            self.response = json.loads(serialized)
-            self.args = [m[1] for m in self.response["messages"] if m[0] ==
+            self.response = json.loads(http_error.read())
+            self.status_code = http_error.code
+            errors = [m[1] for m in self.response["messages"] if m[0] ==
                 "error"]
+            super(StatAPI.ServerError, self).__init__(*errors)
 
     class VersionError(Error):
         """
