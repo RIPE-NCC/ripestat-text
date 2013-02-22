@@ -59,7 +59,7 @@ def get_widget(widget_name):
     sanitized_name = widget_name.replace("-", "_").replace(" ", "_")
     try:
         module = __import__("ripestat.widgets.%s" % sanitized_name,
-            fromlist=True)
+                            fromlist=True)
     except ImportError:
         return partial(default_widget, widget_name)
     return module.widget
@@ -123,7 +123,7 @@ def simple_table(rows):
             widths = [len(col) for col in row]
         else:
             widths = [max(width, len(col)) for (width, col) in
-                zip(widths, row)]
+                      zip(widths, row)]
 
     # Yield the rows
     for row in rows:

@@ -16,10 +16,10 @@ def widget(api, query):
             result.append((field["key"], field["value"]))
         result.append(("num-versions", data["num_versions"]))
         result.append("The ref-by- fields show which objects refer to %s" %
-            data["resource"])
+                      data["resource"])
         for obj in data["backward_refs"]:
             result.append(("ref-by-%s" % obj["primary"]["key"],
-                obj["primary"]["value"]))
+                          obj["primary"]["value"]))
     else:
         for suggestion in data.get("suggestions", []):
             result.append(("suggestion", suggestion["primary"]["value"]))

@@ -12,9 +12,8 @@ def widget(api, query):
         vis_ratio = vis_data["ris_peers_seeing"] / \
             (vis_data["total_ris_peers"] or 1)
         vis_str = "{0:.0%} of {1} peers".format(vis_ratio,
-            vis_data["total_ris_peers"])
+                                                vis_data["total_ris_peers"])
         vis_strs[protocol] = vis_str
-
 
     result = [
         ("routing-status", data["resource"]),
@@ -31,22 +30,24 @@ def widget(api, query):
         result.append(("first-seen", "never"))
 
     if "announced_space" in data:
-        result.append(("announced-v4", "{announced_space[v4][prefixes]} "
-            "prefixes; {announced_space[v4][ips]} IPs".format(**data)))
-        result.append(("announced-v6", "{announced_space[v6][prefixes]} "
-            "prefixes; {announced_space[v6][48s]} /48 equivalents".format(**data)))
+        result.append(
+            ("announced-v4", "{announced_space[v4][prefixes]} "
+             "prefixes; {announced_space[v4][ips]} IPs".format(**data)))
+        result.append(
+            ("announced-v6", "{announced_space[v6][prefixes]} "
+             "prefixes; {announced_space[v6][48s]} /48 equivalents".format(
+                 **data)))
     if "observed_neighbours" in data:
         result.append((("bgp-neighbours", "{observed_neighbours}".format(
             **data))))
 
-    get_table = lambda suggestions: simple_table((s["prefix"], "announced by",
-        str(s["origin"])) for s in suggestions)
+    get_table = lambda suggestions: simple_table(
+        (s["prefix"], "announced by", str(s["origin"])) for s in suggestions)
 
     for suggestion in get_table(data.get("less_specifics", [])):
         result.append(("less-specific", suggestion))
 
     for suggestion in get_table(data.get("more_specifics", [])):
         result.append(("more-specific", suggestion))
-
 
     return data, result

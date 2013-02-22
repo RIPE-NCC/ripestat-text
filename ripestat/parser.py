@@ -14,42 +14,43 @@ class BaseParser(OptionParser):
     # General options
     standard_option_list = [
         make_option("-v", "--verbose", action="count",
-            help="set output level info (-v) or debug (-vv)"),
+                    help="set output level info (-v) or debug (-vv)"),
         make_option("--version", action="store_true",
-            help="print the ripestat-text version"),
+                    help="print the ripestat-text version"),
         make_option("--help", "-h", action="store_true",
-            help="show this help text"),
+                    help="show this help text"),
         make_option("-m", "--include-metadata", action="store_true",
-            help="include metadata in the responses"),
+                    help="include metadata in the responses"),
     ]
 
     # Widget options
     widget_option_list = [
-        make_option("-w", "--widgets", help="a comma separated list "
-            "of widgets and @widget-groups to include in the output"),
-        make_option("-l", "--list-widgets", action="store_true", help=
-            "output the available widgets and @widget-groups"),
-        make_option("-o", "--preserve-order", action="store_true", help=
-            "force the widgets to be returned in the same order even if some "
-                "are faster than others"),
+        make_option("-w", "--widgets", help="a comma separated list of "
+                    "widgets and @widget-groups to include in the output"),
+        make_option("-l", "--list-widgets", action="store_true",
+                    help="output the available widgets and @widget-groups"),
+        make_option("-o", "--preserve-order", action="store_true",
+                    help="force the widgets to be returned in the same "
+                    "order even if some are faster than others"),
     ]
 
     # Data options
     data_option_list = [
         make_option("-d", "--data-call", help=
-            "get the raw response from a data call"),
+                    "get the raw response from a data call"),
         make_option("--list-data-calls", help="output the available "
-            "data calls", action="store_true"),
+                    "data calls", action="store_true"),
         make_option("--explain-data-call", help="print help and "
-            "methodology for a data call"),
+                    "methodology for a data call"),
         make_option("-a", "--abbreviate-data", action="store_true", help=
-            "abbreviate the response to get an idea of the structure"),
+                    "abbreviate the response to get an idea of the "
+                    "structure"),
         make_option("-s", "--select", help="select particular data item"
-            " element(s) using dot notation, possibly using * globs -- e.g. "
-            "'backward_refs.*.primary.key'"),
+                    " element(s) using dot notation, possibly using * globs "
+                    "-- e.g. 'backward_refs.*.primary.key'"),
         make_option("-t", "--template", help="render the response using "
-            "Python 3 string formatting -- e.g. "
-            "'{primary.key} = {primary.value}'"),
+                    "Python 3 string formatting -- e.g. "
+                    "'{primary.key} = {primary.value}'"),
     ]
 
     def __init__(self, *args, **kwargs):

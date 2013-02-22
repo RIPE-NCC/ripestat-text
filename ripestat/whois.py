@@ -44,8 +44,7 @@ class WhoisSerializer(object):
 
         return items
 
-    def dumps(self, native, plugin=None, min_key_width=None,
-            **kwargs):  #pylint: disable-msg=W0613
+    def dumps(self, native, plugin=None, min_key_width=None, **kwargs):
         """
         Dump 'native' to a whois-style string.
         """

@@ -9,6 +9,6 @@ def widget(api, query):
         result.append(("description", data["holder"]))
     if data["block"]:
         result.append(("part-of", data["block"]["resources"] + ": " +
-            data["block"]["name"]))
+                      data["block"]["name"]))
 
     return data, result

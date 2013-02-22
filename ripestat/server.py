@@ -42,7 +42,7 @@ class StatTextProtocol(LineOnlyReceiver):
             log.msg("Connection from {0}".format(client))
 
         self.api = StatAPI("whois", self.factory.base_url,
-            headers=[("X-Forwarded-For", client.host)])
+                           headers=[("X-Forwarded-For", client.host)])
 
     def dataReceived(self, data):
         """
@@ -126,7 +126,7 @@ class StatTextLineParser(BaseParser):
     """
     whois_option_list = [
         make_option("-k", "--keep-alive", action="store_true",
-            help="use a persistent connection")
+                    help="use a persistent connection")
     ]
 
     def __init__(self, protocol, *args, **kwargs):
@@ -136,7 +136,7 @@ class StatTextLineParser(BaseParser):
             self.add_option(option)
 
     def print_help(self, *args, **kwargs):
-        for line in  self.format_option_help().split("\n"):
+        for line in self.format_option_help().split("\n"):
             self.protocol.queueLine(line)
 
     def print_usage(self, *args, **kwargs):

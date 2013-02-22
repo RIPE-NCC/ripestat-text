@@ -10,7 +10,7 @@ def widget(api, query):
 
     loc_rows = []
     for location in sorted(data["locations"], key=lambda l:
-            l["covered_percentage"], reverse=True):
+                           l["covered_percentage"], reverse=True):
         loc_row = []
         percent = location["covered_percentage"]
         if percent >= 0.1:

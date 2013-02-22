@@ -38,7 +38,7 @@ class DataProcessor(object):
         self.output(native["methodology"])
 
     def output_data(self, data_call, query, include_metadata=False,
-            abbreviate=False, select=None, template=None):
+                    abbreviate=False, select=None, template=None):
         """
         Return data for a single data call, possibly including some
         line-oriented maninpulation.
@@ -68,8 +68,8 @@ class DataProcessor(object):
         else:
             output = json.dumps(data, indent=4)
             if abbreviate:
-                output = output.replace('"' + self.ellipsis_marker + '"',
-                    "...")
+                output = output.replace(
+                    '"' + self.ellipsis_marker + '"', "...")
 
         self.output(output)
 
@@ -78,19 +78,19 @@ class DataProcessor(object):
                 self.logger.log(logging.INFO, "This response was cached")
 
     ellipsis_marker = "...abbreviate_lists_ELLIPSIS..."
+
     def abbreviate_lists(self, data, insert_ellipsis=True, top_level=True):
         """
         Recursively remove all but the first item in lists.
         """
         abbreviated = False
         if isinstance(data, list) and data:
-            data = [self.abbreviate_lists(data[0], insert_ellipsis,
-                False)]
+            data = [self.abbreviate_lists(data[0], insert_ellipsis, False)]
             if insert_ellipsis:
                 data.append(self.ellipsis_marker)
         elif isinstance(data, dict):
-            return dict((k, self.abbreviate_lists(data[k], insert_ellipsis,
-                False)) for k in data)
+            return dict((k, self.abbreviate_lists(
+                         data[k], insert_ellipsis, False)) for k in data)
         else:
             return data
         if top_level and abbreviated and not insert_ellipsis:
@@ -107,7 +107,7 @@ class DataProcessor(object):
                 actual_data = data
                 if isinstance(actual_data, dict):
                     actual_data = [actual_data[k] for k in actual_data if
-                        fnmatch(k, member)]
+                                   fnmatch(k, member)]
                 data = GlobList()
 
                 for actual_member in actual_data:
@@ -156,8 +156,6 @@ class DataFormatter(Formatter):
             return self.format(format_string, data, **data)
         elif isinstance(data, list):
             return "\n".join(self.format_data(format_string, obj) for obj in
-                data)
+                             data)
         else:
             return self.format(format_string, data)
-
-

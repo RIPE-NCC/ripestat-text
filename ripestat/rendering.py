@@ -33,8 +33,8 @@ class WidgetRenderer(object):
         self.output("")
         self.output("% widget groups")
         for widget_group, widget_defs in widgets.get_widget_groups():
-            line = "@%s    " % widget_group + ",".join(w["name"] for w in
-                widget_defs)
+            line = "@%s    " % widget_group + ",".join(
+                w["name"] for w in widget_defs)
             self.output(line)
 
     def get_widgets(self, widget_names, resource_type):
@@ -49,8 +49,8 @@ class WidgetRenderer(object):
         final_list = []
         for widget in initial_list:
             if widget.startswith("@"):
-                group_widgets = widgets.get_group_widgets(widget[1:],
-                    resource_type)
+                group_widgets = widgets.get_group_widgets(
+                    widget[1:], resource_type)
                 if group_widgets is None:
                     raise UserError("No such widget group: {0}".format(
                         widget))
@@ -60,7 +60,7 @@ class WidgetRenderer(object):
         return final_list
 
     def output_widgets(self, widgets_spec, query, include_metadata=False,
-            preserve_order=False):
+                       preserve_order=False):
         """
         Carry out queries for the given resource and display results for the
         specified widgets.
@@ -69,7 +69,7 @@ class WidgetRenderer(object):
         if not widget_names:
             if "resource" in query:
                 raise UserError("No widgets match the given resource "
-                    "type.")
+                                "type.")
             else:
                 raise UserError(show_help=True)
 
@@ -77,13 +77,14 @@ class WidgetRenderer(object):
         if "resource" in query:
             header.append("Results for '%s'" % query["resource"])
             header.append("You can see graphical visualizations at "
-                "https://stat.ripe.net/" + query["resource"])
+                          "https://stat.ripe.net/" + query["resource"])
             self.output_whois(header)
 
         # Execute each widget in parallel
         threads = []
         for widget_name in widget_names:
             result = []
+
             def closure(widget_name=widget_name, result=result):
                 """
                 Execute a widget and put its result in a list of its own.
@@ -117,8 +118,8 @@ class WidgetRenderer(object):
                         thread.join(self.order_timeout)
                         if not thread.isAlive():
                             self.output("")
-                            self.output_whois(result,
-                                min_key_width=self.unordered_key_width)
+                            self.output_whois(
+                                result, min_key_width=self.unordered_key_width)
                             threads.remove(thread_info)
         except KeyboardInterrupt:
             return
@@ -149,8 +150,9 @@ class WidgetRenderer(object):
             time_str = ""
             if response is None:
                 response = {}
-            if "query_time" in response:
-                time_str += response["query_time"]
+            query_time = response.get("query_time")
+            if query_time:
+                time_str += query_time
             else:
                 if "query_starttime" in response:
                     time_str = response["query_starttime"]

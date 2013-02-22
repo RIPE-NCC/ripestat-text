@@ -6,11 +6,11 @@ def widget(api, query):
     ]
     if data["block"] and data["block"]["resources"]:
         result.append(("part-of", data["block"]["resources"] + ": " +
-            data["block"]["name"]))
+                      data["block"]["name"]))
     if data["announced"]:
-	asns = []
-	for asn_obj in data["asns"]:
-	    asns.append("AS%s [%s]" % (asn_obj["asn"], asn_obj["holder"]))
+        asns = []
+        for asn_obj in data["asns"]:
+            asns.append("AS%s [%s]" % (asn_obj["asn"], asn_obj["holder"]))
         result.append(("announced", "yes"))
         result.append(("announced-by", ",".join(asns)))
     else:

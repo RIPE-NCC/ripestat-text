@@ -20,18 +20,19 @@ class StatCLIParser(BaseParser):
     """
     # Options for SSO authentication
     auth_option_list = [
-        make_option("-u", "--username", help="your RIPE NCC Access "
-            "e-mail address"),
-        make_option("-g", "--login", help="login subsequent requests "
-            "from this shell", action="store_true"),
+        make_option("-u", "--username",
+                    help="your RIPE NCC Access e-mail address"),
+        make_option("-g", "--login",
+                    help="login subsequent requests from this shell",
+                    action="store_true"),
         make_option("--password", help="your RIPE NCC Access password"
-            " (will appear in `ps` listings etc)")
+                    " (will appear in `ps` listings etc)")
     ]
 
     # Debug options
     extra_option_list = [
         make_option("--tracebacks", help="Show full error reports when "
-        "widgets fail", action="store_true")
+                    "widgets fail", action="store_true")
     ]
 
     def __init__(self, *args, **kwargs):
@@ -94,8 +95,10 @@ class StatCLI(object):
                 if not success:
                     return 1
                 token = stat.api.get_session()
-                self.output("STAT_TOKEN=" + token +
-                    "; export STAT_TOKEN; echo STAT_TOKEN has been set. You are now logged in to RIPEstat with this shell.")
+                self.output(
+                    "STAT_TOKEN=" + token + "; export STAT_TOKEN; "
+                    "echo STAT_TOKEN has been set. You are now logged in to "
+                    "RIPEstat with this shell.")
                 return 0
         return stat.main(params)
 

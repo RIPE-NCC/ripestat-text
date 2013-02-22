@@ -30,8 +30,8 @@ class StatCore(DataProcessor, WidgetRenderer):
         self.api = api
 
         if parser:
-            assert isinstance(parser, BaseParser), ("Custom parsers must "
-                "subclass parser.BaseParser")
+            assert isinstance(parser, BaseParser), \
+                "Custom parsers must subclass parser.BaseParser"
             self.parser = parser
         else:
             self.parser = BaseParser()
@@ -84,11 +84,12 @@ class StatCore(DataProcessor, WidgetRenderer):
         if options.data_call and options.widgets:
             raise UserError(
                 "--data-call and --widgets are conflicting options",
-                    show_help=True)
+                show_help=True)
         elif options.data_call:
             self.api.caller_id += "/data-call"
             try:
-                return self.output_data(options.data_call, query,
+                return self.output_data(
+                    options.data_call, query,
                     include_metadata=options.include_metadata,
                     abbreviate=options.abbreviate_data, select=options.select,
                     template=options.template)
@@ -97,7 +98,8 @@ class StatCore(DataProcessor, WidgetRenderer):
                     raise UserError(exc.args[0], show_help=False)
         else:
             self.api.caller_id += "/widgets"
-            return self.output_widgets(options.widgets, query,
+            return self.output_widgets(
+                options.widgets, query,
                 include_metadata=options.include_metadata,
                 preserve_order=options.preserve_order)
 
@@ -113,7 +115,6 @@ class StatCore(DataProcessor, WidgetRenderer):
         """
         output = self.serializer.dumps(lines, **kwargs)
         self.output(output)
-
 
 
 class StatQuery(dict):

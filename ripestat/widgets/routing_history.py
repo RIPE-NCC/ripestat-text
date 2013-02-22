@@ -12,10 +12,10 @@ def widget(api, query):
     for prefixes_for_origin in data["by_origin"]:
         origin = prefixes_for_origin["origin"]
         for prefix in sorted(prefixes_for_origin["prefixes"], key=lambda x:
-                x["timelines"][-1]["endtime"], reverse=True):
+                             x["timelines"][-1]["endtime"], reverse=True):
             timeline = prefix["timelines"][-1]
             routes.append((origin, prefix["prefix"], timeline["starttime"],
-                "to", timeline["endtime"]))
+                          "to", timeline["endtime"]))
     for value in simple_table(routes):
         result.append(("route", value))
 
