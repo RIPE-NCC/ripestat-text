@@ -2,7 +2,7 @@ from . import simple_table
 
 
 def widget(api, query):
-    data = api.get_data("geoloc", query, version=1)
+    data = api.get_data("geoloc", query, version=2)
 
     result = [
         ("geoloc", data["resource"]),

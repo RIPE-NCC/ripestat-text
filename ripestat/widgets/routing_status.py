@@ -4,7 +4,7 @@ from . import simple_table
 
 
 def widget(api, query):
-    data = api.get_data("routing-status", query, version=2)
+    data = api.get_data("routing-status", query, version=3)
 
     vis_strs = {}
     for protocol in "v4", "v6":

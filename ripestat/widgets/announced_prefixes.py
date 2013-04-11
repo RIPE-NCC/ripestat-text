@@ -1,5 +1,5 @@
 def widget(api, query):
-    data = api.get_data("announced-prefixes", query, version=0)
+    data = api.get_data("announced-prefixes", query, version=1)
 
     result = [
         ("announced-prefixes", data["resource"]),
