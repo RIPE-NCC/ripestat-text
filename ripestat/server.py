@@ -16,9 +16,6 @@ from ripestat.core import StatCore
 from ripestat.parser import BaseParser
 
 
-log.PythonLoggingObserver().start()
-
-
 class StatTextProtocol(LineOnlyReceiver):
     """
     Twisted protocol that passes I/O between the client and StatCore.
@@ -52,7 +49,8 @@ class StatTextProtocol(LineOnlyReceiver):
         """
         reactor.removeReader(self.reader)
         retval = LineOnlyReceiver.dataReceived(self, data)
-        reactor.callInThread(self.processLines)
+        reactor.getThreadPool().callInThreadWithCallback(
+            self.processLinesDone, self.processLines)
         return retval
 
     def lineReceived(self, line):
@@ -72,6 +70,12 @@ class StatTextProtocol(LineOnlyReceiver):
             line = self.input_lines.get()
             self.renderWidgets(line)
             self.input_lines.task_done()
+
+    def processLinesDone(self, success, result):
+        if not success:
+            self.queueLine("There was an error processing this request. "
+                           "Bugs can be reported to stat@ripe.net.")
+            reactor.callFromThread(log.err, result)
 
         # Maintain or end the connection depending on the mode
         if self.keep_alive:
