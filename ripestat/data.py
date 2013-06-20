@@ -124,7 +124,7 @@ class DataProcessor(object):
                     pass
                 try:
                     data = data[member]
-                except IndexError:
+                except (IndexError, KeyError):
                     return ""
         return data
 
