@@ -74,5 +74,5 @@ class UserError(Exception):
     not need to be reminded of the usage.
     """
     def __init__(self, *args, **kwargs):
-        self.show_help = kwargs.pop("show_help")
+        self.show_help = kwargs.pop("show_help", False)
         Exception.__init__(self, *args, **kwargs)
