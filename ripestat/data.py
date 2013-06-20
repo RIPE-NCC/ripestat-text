@@ -122,7 +122,10 @@ class DataProcessor(object):
                     member = int(member)
                 except ValueError:
                     pass
-                data = data[member]
+                try:
+                    data = data[member]
+                except IndexError:
+                    return ""
         return data
 
 
