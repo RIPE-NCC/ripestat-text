@@ -1,6 +1,8 @@
 ripestat-text
 -------------
 
+    **Note:** RIPEstat's Text API has been recently decommissioned, and some functionality of this tool might be affected.
+    
 Licence
 =======
 This package is distributed under the terms of the LGPL v3 or later:
